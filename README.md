@@ -1,4 +1,21 @@
-[toc]
+<!-- TOC -->
+
+- [1 Python知识预备](#1-python知识预备)
+    - [1.1 Python的安装](#11-python的安装)
+    - [1.2 Python解释器](#12-python解释器)
+    - [1.3 Python脚本文件](#13-python脚本文件)
+    - [1.4 NumPy](#14-numpy)
+        - [1.4.1 导入NumPy](#141-导入numpy)
+        - [1.4.2 NumPy数组](#142-numpy数组)
+        - [1.4.3 NumPy的N维数组](#143-numpy的n维数组)
+        - [1.4.4 广播](#144-广播)
+        - [1.4.5 访问元素](#145-访问元素)
+    - [1.5 Matplotlib](#15-matplotlib)
+        - [1.5.1 绘制简单图形](#151-绘制简单图形)
+        - [1.5.2 pyplot的功能](#152-pyplot的功能)
+        - [1.5.3 显示图像](#153-显示图像)
+
+<!-- /TOC -->
 # 1 Python知识预备
 ## 1.1 Python的安装
 将使用的编程语言与库。
@@ -171,31 +188,3 @@ plt.show()
 运行上述代码后，会显示如下图像
 ![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1681377913536-0e6c03eb-4d8f-4ce1-a4af-b1bd0c92fd1d.png#averageHue=%23dbc4b1&clientId=ubed99078-1978-4&from=paste&height=480&id=u0518a560&name=image.png&originHeight=600&originWidth=800&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=335581&status=done&style=none&taskId=u0de96ec0-6444-48b4-966c-e3c23bc4472&title=&width=640)
 因为我的Python解释器运行在根目录下，且图片在dataset下，故图片路径为'dataset/dog.jpg'。
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
