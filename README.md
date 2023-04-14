@@ -17,6 +17,7 @@
 - [2 感知机](#2-感知机)
     - [2.1 感知机的定义](#21-感知机的定义)
     - [2.2 简单逻辑电路](#22-简单逻辑电路)
+    - [2.3 感知机的实现](#23-感知机的实现)
 
 <!-- /TOC -->
 # 1 Python知识预备
@@ -189,12 +190,92 @@ plt.show()
 
 这里决定感知机参数的并不是计算机，而是我们人。我们看着真值表这种“训练数据”，人工考虑（想到）了参数的值。而机器学习的课题就是将这个决定参数值的工作交由计算机自动进行。学习是确定合适的参数的过程，而人要做的是思考感知机的构造（模型），并把训练数据交给计算机。
 
+## 2.3 感知机的实现
+实现与门逻辑电路
+```python
+def AND(x1,x2):
+    w1,w2,theta = 0.5, 0.5, 0.7
+    tmp = x1 * w1 + x2 * w2
+    if tmp <= theta:
+        return 0
+    elif tmp > theta:
+        return 1
+    
+print(AND(0,0)) # 输出0
+print(AND(1,0)) # 输出0
+print(AND(0,1)) # 输出0
+print(AND(1,1)) # 输出1
+```
+定义一个接收参数x1和x2的AND函数，在函数内初始化参数w1, w2, theta，当输入的加权总和超过阈值时返回1，否则返回0。
+
+将 θ 换成 -b ，改写数学公式：<br />$y= \begin{cases}0 \quad (b+w_1x_1 + w_2x_2\le0)\\ 1\quad (b+w_1x_1+w_2x_2>0)\end{cases}$,此处，b称为**偏置**，w1和w2称为**权重**。<br />感知机会计算输入信号和权重的乘积，然后加上偏置，如果这个值大于0则输出1，否则输出0。使用NumPy逐一确认结果。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1681458245530-4e527aac-d5b0-4ef4-815b-04498c6f7ac9.png#averageHue=%231b1b1b&clientId=u21cf038b-070e-4&from=paste&height=230&id=u32b8a377&name=image.png&originHeight=287&originWidth=323&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=14235&status=done&style=none&taskId=u4efd5878-b72b-4457-9aca-bfc566e3d57&title=&width=258.4)<br />在NumPy数组的乘法运算中，当两个数组的元素个数相同时，各个元素分别相乘，因此`w*x`的结果就是它们的各个元素分别相乘（[0, 1] * [0.5, 0.5] => [0, 0.5]）。之后，`np.sum(w*x)`再计算相乘后的各个元素的总和。最后再把偏置加到这个加权总和上。
+
+使用权重和偏置实现与门逻辑电路
+```python
+import numpy as np
 
 
+def AND(x1,x2):
+    x = np.array([x1,x2])
+    w = np.array([0.5,0.5])
+    b = -0.7
+    tmp = np.sum(w*x) + b
+    if tmp <= 0:
+        return 0
+    else:
+        return 1
+    
+if __name__ == '__main__':
+    for xs in [(0, 0), (1, 0), (0, 1), (1, 1)]:
+        y = AND(xs[0], xs[1])
+        print(str(xs) + " -> " + str(y))
+```
+输出：![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1681462775874-b8b92d7b-64d8-4d15-af91-679f8b225cde.png#averageHue=%23222c32&clientId=u21cf038b-070e-4&from=paste&height=81&id=u1cfbea84&name=image.png&originHeight=101&originWidth=240&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=3928&status=done&style=none&taskId=u662b8860-04e1-438e-bad7-b0646028804&title=&width=192)
+
+这里把−θ命名为偏置b，但是请注意，偏置和权重w1、w2的作用是不一样的。具体地说，w1和w2是控制输入信号的重要性的参数，而偏置是调整神经元被激活的容易程度（输出信号为 1 的程度）的参数。比如，若 b 为−0.1，则只要输入信号的加权总和超过0.1，神经元就会被激活。但是如果 b 为−20.0，则输入信号的加权总和必须超过20.0，神经元才会被激活。
+
+实现与非门和或门
+```python
+import numpy as np
 
 
+def NAND(x1,x2):
+    x = np.array([x1,x2])
+    w = np.array([-0.5,-0.5])
+    b = -0.7
+    tmp = np.sum(w*x) + b
+    if tmp <= 0:
+        return 0
+    else:
+        return 1
+    
+if __name__ == '__main__':
+    for xs in [(0, 0), (1, 0), (0, 1), (1, 1)]:
+        y = NAND(xs[0], xs[1])
+        print(str(xs) + " -> " + str(y))
+```
+输出：![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1681462830103-0a9733a1-1836-4b63-b831-9a647f5df3ca.png#averageHue=%23212b30&clientId=u21cf038b-070e-4&from=paste&height=84&id=u835799bf&name=image.png&originHeight=105&originWidth=279&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=4034&status=done&style=none&taskId=u255bca7d-21ee-4bbb-9a26-ba2a1a2515a&title=&width=223.2)
+
+```python
+import numpy as np
 
 
+def OR(x1,x2):
+    x = np.array([x1,x2])
+    w = np.array([0.5,0.5])
+    b = -0.2
+    tmp = np.sum(w*x) + b
+    if tmp <= 0:
+        return 0
+    else:
+        return 1
+    
+if __name__ == '__main__':
+    for xs in [(0, 0), (1, 0), (0, 1), (1, 1)]:
+        y = OR(xs[0], xs[1])
+        print(str(xs) + " -> " + str(y))
+```
+输出：![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1681462714163-a8d450fa-dcb7-4379-8e6b-585ba74bc547.png#averageHue=%23222c31&clientId=u21cf038b-070e-4&from=paste&height=80&id=u597a2d12&name=image.png&originHeight=100&originWidth=239&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=3962&status=done&style=none&taskId=ud777c716-6348-4356-a22f-f94c4e60754&title=&width=191.2)<br />与门、与非门、或门区别只在于权重参数的值，因此，在与非门和或门的实现中，仅设置权重和偏置的值这一点和与门的实现不同。
 
 
 
