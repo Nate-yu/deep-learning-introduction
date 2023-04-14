@@ -18,6 +18,8 @@
     - [2.1 感知机的定义](#21-感知机的定义)
     - [2.2 简单逻辑电路](#22-简单逻辑电路)
     - [2.3 感知机的实现](#23-感知机的实现)
+    - [2.4 感知机的局限性](#24-感知机的局限性)
+    - [2.5 多层感知机](#25-多层感知机)
 
 <!-- /TOC -->
 # 1 Python知识预备
@@ -277,12 +279,51 @@ if __name__ == '__main__':
 ```
 输出：![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1681462714163-a8d450fa-dcb7-4379-8e6b-585ba74bc547.png#averageHue=%23222c31&clientId=u21cf038b-070e-4&from=paste&height=80&id=u597a2d12&name=image.png&originHeight=100&originWidth=239&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=3962&status=done&style=none&taskId=ud777c716-6348-4356-a22f-f94c4e60754&title=&width=191.2)<br />与门、与非门、或门区别只在于权重参数的值，因此，在与非门和或门的实现中，仅设置权重和偏置的值这一点和与门的实现不同。
 
+## 2.4 感知机的局限性
+> 异或门：异或门也被称为逻辑异或电路，仅当x1或x2中的一方为1时，才会输出1（“异或”是拒绝其他的意思）。
+
+| $x_1$ | $x_2$ | $y$ |
+| --- | --- | --- |
+| 0 | 0 | 0 |
+| 1 | 0 | 1 |
+| 0 | 1 | 1 |
+| 1 | 1 | 0 |
+
+用前面的感知机是无法实现异或门的。感知机的局限性就在于它只能表示一条直线分割的空间。
+
+## 2.5 多层感知机
+通过已有门电路的组合：<br />异或门的制作方法有很多，其中之一就是组合我们前面做好的与门、与非门、或门进行配置。与门，与非门，或门用如下图的符号表示<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1681472867117-0a56e39e-d4f8-4f59-8e22-04e15c093b6a.png#averageHue=%23414141&clientId=u21cf038b-070e-4&from=paste&height=167&id=ue80250b0&name=image.png&originHeight=209&originWidth=906&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=16198&status=done&style=none&taskId=ud6112002-d08f-405b-ae78-95dc944dd28&title=&width=724.8)<br />通过组合感知机（叠加层）就可以实现异或门。异或门可以通过如下所示配置来实现，这里，x1和x2表示输入信号，y表示输出信号，x1和x2是与非门和或门的输入，而与非门和或门的输出则是与门的输入。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1681473004376-abd7ade6-d849-4a66-81fb-5bc2fc6adc8c.png#averageHue=%23414141&clientId=u21cf038b-070e-4&from=paste&height=193&id=u01e5cafb&name=image.png&originHeight=241&originWidth=701&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=20588&status=done&style=none&taskId=u605abcec-265e-4d61-982f-8d0f5264084&title=&width=560.8)<br />验证正确性，把s1作为与非门的输出，把s2作为或门的输出，填入真值表
+
+| $x_1$ | $x_2$ | $s_1$ | $s_2$ | $y$ |
+| --- | --- | --- | --- | --- |
+| 0 | 0 | 1 | 0 | 0 |
+| 1 | 0 | 1 | 1 | 1 |
+| 0 | 1 | 1 | 1 | 1 |
+| 1 | 1 | 0 | 1 | 0 |
 
 
+实现异或门
+```python
+from and_gate import AND
+from or_gate import OR
+from nand_gate import NAND
 
 
+def XOR(x1,x2):
+    s1 = NAND(x1,x2)
+    s2 = OR(x1,x2)
+    y = AND(s1,s2)
+    return y
 
 
+if __name__ == '__main__':
+    for xs in [(0, 0), (1, 0), (0, 1), (1, 1)]:
+        y = XOR(xs[0], xs[1])
+        print(str(xs) + " -> " + str(y))
+```
+输出：![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1681473328701-19216ab6-3511-4f32-bc11-73fc03b34e10.png#averageHue=%23212a30&clientId=u21cf038b-070e-4&from=paste&height=81&id=ubd76c574&name=image.png&originHeight=101&originWidth=303&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=4237&status=done&style=none&taskId=uf5797a2c-dd42-4300-b131-327259eb8f6&title=&width=242.4)
 
+用感知机的方表示方法（明确显示神经元）来表示这个异或门<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1681473381307-ae7c0818-dcb4-4350-929e-db0bd17e57fe.png#averageHue=%23414141&clientId=u21cf038b-070e-4&from=paste&height=404&id=ueb31e869&name=image.png&originHeight=505&originWidth=883&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=49078&status=done&style=none&taskId=u29fe963c-dba1-463d-a9a2-3282706f889&title=&width=706.4)<br />异或门是一种多层结构的神经网络。这里，将最左边的一列称为第0层，中间的一列称为第1层，最右边的一列称为第2层。实际上，与门、或门是单层感知机，而异或门是2层感知机。叠加了多层的感知机也称为多层感知机（multi-layered perceptron）。<br />在如上图所示的2层感知机中，先在第0层和第1层的神经元之间进行信号的传送和接收，然后在第1层和第2层之间进行信号的传送和接收，具体如下所示。
 
-
+1. 第0层的两个神经元接收输入信号，并将信号发送至第1层的神经元。
+2. 第1层的神经元将信号发送至第2层的神经元，第2层的神经元输出y。
