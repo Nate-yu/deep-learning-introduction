@@ -20,6 +20,9 @@
     - [2.3 感知机的实现](#23-感知机的实现)
     - [2.4 感知机的局限性](#24-感知机的局限性)
     - [2.5 多层感知机](#25-多层感知机)
+- [3 神经网络](#3-神经网络)
+    - [3.1 从感知机到神经网络](#31-从感知机到神经网络)
+    - [3.2 激活函数](#32-激活函数)
 
 <!-- /TOC -->
 # 1 Python知识预备
@@ -327,3 +330,18 @@ if __name__ == '__main__':
 
 1. 第0层的两个神经元接收输入信号，并将信号发送至第1层的神经元。
 2. 第1层的神经元将信号发送至第2层的神经元，第2层的神经元输出y。
+
+# 3 神经网络
+> 神经网络的一个重要性质是它可以自动地从数据中学习到合适的权重参数。
+
+## 3.1 从感知机到神经网络
+如下图所示，把最左边的一列称为**输入层**，最右边的一列称为**输出层**，中间的一列称为**中间层**。中间层有时候也被称为隐藏层。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1681561346694-117eab84-9dbd-4db3-8220-3d159886a29d.png#averageHue=%23424242&clientId=u664bfb51-2e30-4&from=paste&height=594&id=ue568955d&name=image.png&originHeight=742&originWidth=921&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=89516&status=done&style=none&taskId=u60bc8de4-886e-4cb5-8ac4-108055ab60e&title=&width=736.8)
+
+简化感知机数学式：$y=h(b+w_1x_1+w_2x_2)$，我们用一个函数来表示这种分情况的动作（超过0则输出1，否则输出0）。<br />$h(x) = \begin{cases} 0 \quad (x \le 0) \\ 1 \quad (x>0)\end{cases}$<br />输入信号的总和会被函数h(x)转换，转换后的值就是输出y。h（x）函数会将输入信号的总和转换为输出信号，这种函数一般称为激活函数（activation function）。其作用在于决定如何来激活输入信号的总和。<br />进一步来改进上式：<br />$(1) \quad a = b + w_1x_1 + w_2x_2$<br />$(2) \quad y = h(x)$<br />首先，式（1）计算加权输入信号和偏置的总和，记为a。然后，式（2）用h()函数将a转换为输出y。下图为明确显示激活函数的计算过程。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1681562541410-54919415-68b7-42d2-9f18-249e7b918385.png#averageHue=%23424242&clientId=u664bfb51-2e30-4&from=paste&height=307&id=u6f8e6ecf&name=image.png&originHeight=613&originWidth=689&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=43209&status=done&style=none&taskId=u07b64979-c9bc-4e91-bfb8-0c8817a31cd&title=&width=345)信号的加权总和为节点a，然后节点a被激活函数h()转换成节点y。
+
+![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1681562849199-b81a45ea-bca0-42c8-b842-b840280fb2f5.png#averageHue=%23414141&clientId=u664bfb51-2e30-4&from=paste&height=238&id=u0c9793c0&name=image.png&originHeight=298&originWidth=1316&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=38865&status=done&style=none&taskId=uc31b44f3-42b7-4582-8c50-cf0603cb52f&title=&width=1052.8)<br />左图是一般的神经元的图，右图是在神经元内部明确显示激活函数的计算过程的图（a表示输入信号的总和，h()表示激活函数，y表示输出）
+
+> “朴素感知机”是指单层网络，指的是激活函数使用了阶跃函数 A 的模型。“多层感知机”是指神经网络，即使用 sigmoid 函数等平滑的激活函数的多层网络。
+
+## 3.2 激活函数
+
