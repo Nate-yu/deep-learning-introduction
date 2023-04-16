@@ -25,6 +25,8 @@
     - [3.2 激活函数](#32-激活函数)
         - [3.2.1 sigmoid函数](#321-sigmoid函数)
         - [3.2.2 阶跃函数的实现与图像](#322-阶跃函数的实现与图像)
+        - [3.2.3 sigmoid函数的实现与图像](#323-sigmoid函数的实现与图像)
+        - [3.2.4 sigmoid函数和跃阶函数的比较](#324-sigmoid函数和跃阶函数的比较)
 
 <!-- /TOC -->
 # 1 Python知识预备
@@ -388,6 +390,58 @@ plt.ylim(-0.1,1.1) # 指定y轴的范围
 plt.show()
 ```
 	step_function()以该NumPy数组为参数，对数组的各个元素执行阶跃函数运算，并以数组形式返回运算结果。对数组x、y进行绘图，结果如下图所示。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1681612000678-69066074-31e3-4ba1-a84b-e509b46c4726.png#averageHue=%23fcfcfc&clientId=ufb91a362-4377-4&from=paste&height=480&id=ud36ec270&name=image.png&originHeight=600&originWidth=800&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=12443&status=done&style=none&taskId=u0479c1a1-3b0e-4544-a25a-5b38578db28&title=&width=640)其值呈阶梯式变化，所以称为阶跃函数。
+
+### 3.2.3 sigmoid函数的实现与图像
+用Python表示sigmoid函数如下
+```python
+def sigmoid(x):
+    return 1 / (1 + np.exp(-x))
+```
+如果在这个sigmoid函数中输入一个NumPy数组，则结果如下所示<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1681635280332-bd2a8352-4cd4-4a04-b509-ce2c717358c1.png#averageHue=%2331353d&clientId=ufb91a362-4377-4&from=paste&height=170&id=u332bef14&name=image.png&originHeight=212&originWidth=593&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=17342&status=done&style=none&taskId=u04174489-7b40-407b-ae1e-91de5761b90&title=&width=474.4)<br />根据NumPy 的广播功能，如果在标量和NumPy数组之间进行运算，则标量会和NumPy数组的各个元素进行运算。
+
+画出sigmoid函数如下。
+```python
+import numpy as np
+import matplotlib.pylab as plt
+
+
+def sigmoid(x):
+    return 1 / (1 + np.exp(-x))    
+
+
+x = np.arange(-5.0, 5.0, 0.1)
+y = sigmoid(x)
+plt.plot(x, y)
+plt.ylim(-0.1, 1.1)
+plt.show()
+```
+![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1681635664998-f0b2f0c8-f623-4c5c-96cb-3f1e3e99cd2e.png#averageHue=%23fcfcfc&clientId=ufb91a362-4377-4&from=paste&height=480&id=u4ceb15e4&name=image.png&originHeight=600&originWidth=800&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=20800&status=done&style=none&taskId=ud6d74a35-2e41-48fe-9a16-74a08588d17&title=&width=640)
+
+### 3.2.4 sigmoid函数和跃阶函数的比较
+
+1. sigmoid函数是一条平滑的曲线，随着输入发生连续性的变化。而阶跃函数以0为界，输出发生急剧性的变化。二者图像比较如下。
+```python
+import numpy as np
+import matplotlib.pylab as plt
+from sigmoid import sigmoid
+from step_function import step_function
+
+
+x = np.arange(-5.0,5.0,0.1)
+y1 = sigmoid(x)
+y2 = step_function(x)
+
+
+plt.plot(x,y1)
+plt.plot(x,y2,'k--')
+plt.ylim(-0.1,1.1)
+plt.show()
+```
+![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1681636235482-b59fc910-2e0c-4f38-a6a6-dacf95aaf11e.png#averageHue=%23fbfbfb&clientId=ufb91a362-4377-4&from=paste&height=480&id=u8ff07ac1&name=image.png&originHeight=600&originWidth=800&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=24907&status=done&style=none&taskId=u41657456-2262-416d-a15d-34d59d8d628&title=&width=640)虚线为阶跃函数。
+
+2. 相对于阶跃函数只能返回0或1，sigmoid函数可以返回实数，也就是说，感知机中神经元之间的流动的是0或1的二元信号，而神经网络中流动的是连续的实数值信号。
+3. 从宏观上看，二者具有相似形状，输出的值取决于输入信号的重要性
+4. 不管输入信号有多小，或者多大，输出信号都在0到1之间
 
 
 
