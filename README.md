@@ -27,6 +27,7 @@
         - [3.2.2 阶跃函数的实现与图像](#322-阶跃函数的实现与图像)
         - [3.2.3 sigmoid函数的实现与图像](#323-sigmoid函数的实现与图像)
         - [3.2.4 sigmoid函数和跃阶函数的比较](#324-sigmoid函数和跃阶函数的比较)
+        - [3.2.5 ReLU函数](#325-relu函数)
 
 <!-- /TOC -->
 # 1 Python知识预备
@@ -442,11 +443,18 @@ plt.show()
 2. 相对于阶跃函数只能返回0或1，sigmoid函数可以返回实数，也就是说，感知机中神经元之间的流动的是0或1的二元信号，而神经网络中流动的是连续的实数值信号。
 3. 从宏观上看，二者具有相似形状，输出的值取决于输入信号的重要性
 4. 不管输入信号有多小，或者多大，输出信号都在0到1之间
+5. 二者均为非线性函数
 
+### 3.2.5 ReLU函数
+> ReLU函数在输入大于0时，直接输出该值；在输入小于等于0时，输出0
 
+ReLU函数可以标识为下面的式子。<br />$h(x) = \begin{cases} x \quad (x > 0) \\ 0 \quad (x \le 0) \end{cases}$<br />ReLU函数可用如下代码实现。
+```python
+def relu(x):
+    return np.maximum(0,x)
+```
 
-
-
+maximum函数会从输入的数值中选择较大的那个值进行输出。ReLU函数图像如下。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1681636976693-e2e19e10-84ec-4dbd-aa3c-41873ae5d997.png#averageHue=%23fdfdfd&clientId=ufb91a362-4377-4&from=paste&height=480&id=u8a5fe94b&name=image.png&originHeight=600&originWidth=800&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=14548&status=done&style=none&taskId=ucabee685-461f-466e-893d-95cacf93588&title=&width=640)
 
 
 
