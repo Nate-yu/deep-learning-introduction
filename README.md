@@ -23,6 +23,8 @@
 - [3 神经网络](#3-神经网络)
     - [3.1 从感知机到神经网络](#31-从感知机到神经网络)
     - [3.2 激活函数](#32-激活函数)
+        - [3.2.1 sigmoid函数](#321-sigmoid函数)
+        - [3.2.2 阶跃函数的实现与图像](#322-阶跃函数的实现与图像)
 
 <!-- /TOC -->
 # 1 Python知识预备
@@ -344,4 +346,65 @@ if __name__ == '__main__':
 > “朴素感知机”是指单层网络，指的是激活函数使用了阶跃函数 A 的模型。“多层感知机”是指神经网络，即使用 sigmoid 函数等平滑的激活函数的多层网络。
 
 ## 3.2 激活函数
+> 阶跃函数：以阈值为界，一旦输入超过阈值，就切换输出。这样的函数称为“阶跃函数”
+
+因此，可以说感知机中使用了阶跃函数作为激活函数。也就是说，在激活函数的众多候选函数中，感知机使用了阶跃函数。
+### 3.2.1 sigmoid函数
+神经网络中经常使用的一个激活函数就是sigmoid函数：$h(x) = \frac{1}{1+e^{-x}}$。神经网络中用sigmoid函数作为激活函数，进行信号的转换，转换后的信号被传送给下一个神经元。神经元的多层<br />连接的构造、信号的传递方法等，基本上和感知机是一样的。
+
+### 3.2.2 阶跃函数的实现与图像
+当输入超过0时，输出1，否则输出0。可以像下面这样简单地实现阶跃函数。
+```python
+def step_function(x):
+    if x > 0:
+        return 1
+    else:
+        return 0
+```
+
+将其修改为支持NumPy数组的实现。
+```python
+def step_function(x):
+    y = x > 0
+    return y.astype(np.int)
+```
+
+对上面的代码进行解读：对NumPy数组进行不等号运算后，数组的各个元素都会进行不等号运算，生成一个布尔型数组，大于0的被转换为True，小于等于0的被转换为False，从而形成一个新的布尔型数组y。但我们想要的跃阶函数是会输出int型的0或1的函数，因此需要把数组y的元素类型从布尔型转换为int型。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1681611582389-7bf9f2e8-bd77-4c28-8d3f-81fed8672778.png#averageHue=%2330343c&clientId=ufb91a362-4377-4&from=paste&height=217&id=uc36410ff&name=image.png&originHeight=271&originWidth=530&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=19501&status=done&style=none&taskId=u4af4b33c-87af-4ad6-a74d-03e5707ee3b&title=&width=424)<br />如上所示，可以用astype()方法转换NumPy数组的类型。astype()方法通过参数指定期望的类型，这个例子中是np.int64型。Python中将布尔型转换为int型后，True会转换为1，False会转换为0。
+
+用图来表示上面定义的阶跃函数，为此需要使用matplotlib库。
+```python
+import numpy as np
+import matplotlib.pylab as plt
+
+
+def step_function(x):
+    return np.array(x>0, dtype=np.int64)
+
+
+x = np.arange(-5.0, 5.0, 0.1) # 在 −5.0 到 5.0 的范围内，以 0.1 为单位，生成NumPy数组（[-5.0, -4.9,..., 4.9]）
+y = step_function(x)
+plt.plot(x,y)
+plt.ylim(-0.1,1.1) # 指定y轴的范围
+plt.show()
+```
+	step_function()以该NumPy数组为参数，对数组的各个元素执行阶跃函数运算，并以数组形式返回运算结果。对数组x、y进行绘图，结果如下图所示。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1681612000678-69066074-31e3-4ba1-a84b-e509b46c4726.png#averageHue=%23fcfcfc&clientId=ufb91a362-4377-4&from=paste&height=480&id=ud36ec270&name=image.png&originHeight=600&originWidth=800&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=12443&status=done&style=none&taskId=u0479c1a1-3b0e-4544-a25a-5b38578db28&title=&width=640)其值呈阶梯式变化，所以称为阶跃函数。
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
