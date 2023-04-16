@@ -28,6 +28,10 @@
         - [3.2.3 sigmoid函数的实现与图像](#323-sigmoid函数的实现与图像)
         - [3.2.4 sigmoid函数和跃阶函数的比较](#324-sigmoid函数和跃阶函数的比较)
         - [3.2.5 ReLU函数](#325-relu函数)
+    - [3.3 多维数组的运算](#33-多维数组的运算)
+        - [3.3.1 多维数组](#331-多维数组)
+        - [3.3.2 矩阵乘法](#332-矩阵乘法)
+        - [3.3.3 神经网络的内积](#333-神经网络的内积)
 
 <!-- /TOC -->
 # 1 Python知识预备
@@ -456,10 +460,19 @@ def relu(x):
 
 maximum函数会从输入的数值中选择较大的那个值进行输出。ReLU函数图像如下。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1681636976693-e2e19e10-84ec-4dbd-aa3c-41873ae5d997.png#averageHue=%23fdfdfd&clientId=ufb91a362-4377-4&from=paste&height=480&id=u8a5fe94b&name=image.png&originHeight=600&originWidth=800&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=14548&status=done&style=none&taskId=ucabee685-461f-466e-893d-95cacf93588&title=&width=640)
 
+## 3.3 多维数组的运算
+### 3.3.1 多维数组
+用NumPy来生成多维数组。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1681643307918-46f3a580-8bbc-437e-87d2-5ab3e4fc4ad1.png#averageHue=%232e323a&clientId=u59ebbd16-e1e7-4&from=paste&height=216&id=u54284b0f&name=image.png&originHeight=270&originWidth=470&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=15105&status=done&style=none&taskId=u1f38e056-e47c-4e0b-a5cc-bef5bd3670b&title=&width=376)<br />数组的维数可以通过`np.dim()`函数获得，数组的形状可以通过实例变量`shape`获得。在上面的例子中，A是一维数组，由4个元素构成，`A.shape`的结果是一个元组。
 
+![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1681643517943-81f59bae-02fb-44c2-ad37-27ccbe406e3e.png#averageHue=%232d3139&clientId=u59ebbd16-e1e7-4&from=paste&height=202&id=uc7ffd61c&name=image.png&originHeight=253&originWidth=504&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=12638&status=done&style=none&taskId=ud02b3a9b-e85d-4652-ac68-064ca238cb2&title=&width=403.2)<br />这里生成了一个 3 X 2 的数组B。其第一个维度有3个元素，第二个维度有2个元素。另外，第一个维度对应第0维，第二个维度对应第1维。
 
+### 3.3.2 矩阵乘法
+利用NumPy实现矩阵乘法。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1681643820556-218862d9-e6a5-4447-8350-3920dc81d6f9.png#averageHue=%2331353d&clientId=u59ebbd16-e1e7-4&from=paste&height=196&id=ucb8029d9&name=image.png&originHeight=245&originWidth=440&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=16972&status=done&style=none&taskId=u2a8c35e1-e137-408f-ac05-bf03705ed5a&title=&width=352)<br />这里的A、B均为2 X 2的矩阵，其乘积可以通过NumPy的`np.dot()`函数计算。`np.dot()`接收两个NumPy数组作为参数，并返回数组的乘积。<br />注意：在两个矩阵相乘时，矩阵A的第1维和矩阵B的第0维元素个数必须一致。另外，当A是二维矩阵，B是一维数组时，对应维度的元素个数要保持一致的原则依然成立。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1681645792389-f62ce452-e9da-462b-829a-2ec930281e98.png#averageHue=%232f333b&clientId=u59ebbd16-e1e7-4&from=paste&height=176&id=udd9d4a41&name=image.png&originHeight=220&originWidth=558&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=16623&status=done&style=none&taskId=u9995ea01-5894-4381-af63-f0cf4796f7c&title=&width=446.4)
 
+### 3.3.3 神经网络的内积
+以如下图所示的简单神经网络为对象（省略了偏置和激活函数，只有权重），使用NumPy矩阵来实现神经网络。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1681645943756-99d872ff-d923-4331-bc0a-4403f74712f9.png#averageHue=%23414141&clientId=u59ebbd16-e1e7-4&from=paste&height=348&id=u74601007&name=image.png&originHeight=435&originWidth=1034&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=52363&status=done&style=none&taskId=u35db73ca-5808-4e4d-ab21-f505b6ffc8b&title=&width=827.2)
 
+![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1681646153811-f01fbcb5-51d7-423f-b9dd-88040812fcc5.png#averageHue=%232e323a&clientId=u59ebbd16-e1e7-4&from=paste&height=255&id=uabae394d&name=image.png&originHeight=319&originWidth=507&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=20911&status=done&style=none&taskId=uc09c5e89-8704-4e5e-9a6e-ad504b6c0be&title=&width=405.6)<br />如上所示，使用np.dot可以一次性计算出Y的结果。
 
 
 
