@@ -8,4 +8,4 @@ x = np.arange(-5.0, 5.0, 0.1) # 在 −5.0 到 5.0 的范围内，以 0.1 为单
 y = step_function(x)
 plt.plot(x,y)
 plt.ylim(-0.1,1.1) # 指定y轴的范围
-plt.show()
+# plt.show()

@@ -32,6 +32,10 @@
         - [3.3.1 多维数组](#331-多维数组)
         - [3.3.2 矩阵乘法](#332-矩阵乘法)
         - [3.3.3 神经网络的内积](#333-神经网络的内积)
+    - [3.4 3层神经网络的实现](#34-3层神经网络的实现)
+        - [3.4.1 符号确认](#341-符号确认)
+        - [3.4.2 各层间信号传递的实现](#342-各层间信号传递的实现)
+        - [3.4.3 代码实现小结](#343-代码实现小结)
 
 <!-- /TOC -->
 # 1 Python知识预备
@@ -473,6 +477,100 @@ maximum函数会从输入的数值中选择较大的那个值进行输出。ReLU
 以如下图所示的简单神经网络为对象（省略了偏置和激活函数，只有权重），使用NumPy矩阵来实现神经网络。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1681645943756-99d872ff-d923-4331-bc0a-4403f74712f9.png#averageHue=%23414141&clientId=u59ebbd16-e1e7-4&from=paste&height=348&id=u74601007&name=image.png&originHeight=435&originWidth=1034&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=52363&status=done&style=none&taskId=u35db73ca-5808-4e4d-ab21-f505b6ffc8b&title=&width=827.2)
 
 ![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1681646153811-f01fbcb5-51d7-423f-b9dd-88040812fcc5.png#averageHue=%232e323a&clientId=u59ebbd16-e1e7-4&from=paste&height=255&id=uabae394d&name=image.png&originHeight=319&originWidth=507&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=20911&status=done&style=none&taskId=uc09c5e89-8704-4e5e-9a6e-ad504b6c0be&title=&width=405.6)<br />如上所示，使用np.dot可以一次性计算出Y的结果。
+
+## 3.4 3层神经网络的实现
+3层神经网络示意图<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1681718849833-835a8ff6-5e78-4e74-b979-244ac9ec3a9e.png#averageHue=%23424242&clientId=u05e7a439-d16b-4&from=paste&height=349&id=ub68b167d&name=image.png&originHeight=436&originWidth=843&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=58696&status=done&style=none&taskId=ue9602726-24da-4a04-a051-0607c21680c&title=&width=674.4)<br />输入层有2个神经元，第1个隐藏层有3个神经元，第2个隐藏层有2个神经元，输出层有2个神经元
+
+### 3.4.1 符号确认
+权重符号如下<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1681719977951-16438890-0340-4ff1-808d-51617a665b8b.png#averageHue=%23414141&clientId=u05e7a439-d16b-4&from=paste&height=307&id=ufa409226&name=image.png&originHeight=384&originWidth=830&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=50531&status=done&style=none&taskId=u1428a267-6e8d-48c9-bb10-9e9ae8a31a6&title=&width=664)<br />权重和隐藏层的神经元的右上角有一个“(1)”，表示权重和神经元的层号（即第1层的权重、第1层的神经元）。此外，权重的右下角有两个数字，它们是后一层的神经元和前一层的神经元的索引号。$w_{12}^{(1)}$表示前一层的第2个神经元$x_2$到后一层的第1个神经元$a_1^{(1)}$的权重。权重右下角按照“后一层的索引号、前一层的索引号”的顺序排列。
+
+### 3.4.2 各层间信号传递的实现
+下面是输入层到第1层的第一个神经元的信号传递过程<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1681720475570-d9853296-24ca-46af-bc82-72792b2d10f2.png#averageHue=%23424242&clientId=u05e7a439-d16b-4&from=paste&height=419&id=ue9118699&name=image.png&originHeight=524&originWidth=860&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=90058&status=done&style=none&taskId=u30f68141-080c-407c-8406-fa898e751bb&title=&width=688)<br />上图中增加了表示偏置的神经元“1”。偏置的右下角的索引号只有一个，因为前一层的偏置神经元只有一个。<br />下面用数学式表示$a_1^{(1)}$通过加权信号和偏置的和按如下方式进行计算：$a_1^{(1)} = w_{11}^{1}x_1 + w_{12}^{(1)}x_2 + b_1^{(1)}$。此外，如果使用矩阵的乘法运算，则可以将第1层的加权表示成下面的式子：$\bm {A}^{(1)} = \bm{XW}^{(1)} + \bm{B}^{(1)}$，其中各元素如下所示<br />$\bm{A}^{(1)} = \begin{pmatrix}a_1^{(1)} & a_2^{(1)} & a_3^{(1)}\end{pmatrix}，\bm{X} = \begin{pmatrix} x_1 & x_2 \end{pmatrix}，\bm{B}^{(1)}=\begin{pmatrix} b_1^{(1)} & b_2^{(1)} & b_3^{(1)} \end{pmatrix}，W^{(1)} = \begin{pmatrix} w_{11}^{(1)} &w_{21}^{(1)} & w_{31}^{(1)} \\ w_{12}^{(1)} &w_{22}^{(1)} & w_{32}^{(1)}\end{pmatrix}$
+
+下面来用NumPy多维数组实现上面矩阵的乘法运算。（将输入信号、权重、偏置设置成任意值）
+```python
+X = np.array([1.0,0.5])
+W1 = np.array([[0.1, 0.3, 0.5], [0.2, 0.4, 0.6]])
+B1 = np.array([0.1, 0.2, 0.3])
+
+print(W1.shape) # (2, 3)
+print(X.shape)  # (2,)
+print(B1.shape) # (3,)
+
+A1 = np.dot(X, W1) + B1
+```
+W1为2 X 3的数组，X是元素个数为2的一维数组。第1层中激活函数的计算过程如下图所示。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1681722975139-248aaf98-4c04-4ddd-9ce1-5662001cbc99.png#averageHue=%23424242&clientId=u05e7a439-d16b-4&from=paste&height=496&id=u46daa2a3&name=image.png&originHeight=620&originWidth=856&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=128100&status=done&style=none&taskId=u19e7490d-cc79-4934-a5c8-4afb1c35bc3&title=&width=684.8)<br />如上图所示，隐藏层的加权和（加权信号和偏置的总和）用a表示，被激活函数转换后的信号用z表示。此外，图纸h()表示激活函数。这里使用sigmoid函数，用Python实现如下所示。
+```python
+Z1 = sigmoid(A1)
+
+print(A1) # [0.3, 0.7, 1.1]
+print(Z1) # [0.57444252, 0.66818777, 0.75026011]
+```
+
+下面来实现第1层到第2层的信号传递。图示如下。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1681723225327-ee1fd5bc-c0cc-450b-be54-39ee5527611c.png#averageHue=%23424242&clientId=u05e7a439-d16b-4&from=paste&height=464&id=udff0d667&name=image.png&originHeight=580&originWidth=851&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=132079&status=done&style=none&taskId=u20182c7a-da76-4713-b685-db4f5ba8666&title=&width=680.8)<br />除了第1层的输出（Z1）变成了第2层的输入这一点以外，这个实现和刚才的代码完全相同。
+```python
+X = np.array([1.0,0.5])
+W1 = np.array([[0.1, 0.3, 0.5], [0.2, 0.4, 0.6]])
+B1 = np.array([0.1, 0.2, 0.3])
+
+A1 = np.dot(X, W1) + B1
+Z1 = sigmoid(A1)
+W2 = np.array([[0.1, 0.4], [0.2, 0.5], [0.3, 0.6]])
+B2 = np.array([0.1, 0.2])
+
+A2 = np.dot(Z1, W2) + B2
+```
+
+最后是第2层到输出层的信号传递。输出层的实现也和之前的实现基本相同。不过，最后的激活函数和之前的隐藏层有所不同。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1681723450946-8a274b97-b915-41c9-9e43-ea328454b13c.png#averageHue=%23424242&clientId=u05e7a439-d16b-4&from=paste&height=433&id=uf7d73495&name=image.png&originHeight=541&originWidth=846&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=123080&status=done&style=none&taskId=ubff74a00-47a9-4d8a-8854-de57a5d174a&title=&width=676.8)
+```python
+def identity_function(x):
+    return x
+    
+W3 = np.array([[0.1, 0.3], [0.2, 0.4]])
+B3 = np.array([0.1, 0.2])
+A3 = np.dot(Z2, W3) + B3
+
+Y = identity_function(A3) # 或者Y = A3
+```
+这里我们定义了`identity_function()`函数（也称为“恒等函数”），并将其作为输出层的激活函数。恒等函数会将输入按原样输出，这里这样实现只是为了和之前的流程保持统一。
+> 一般地，回归问题可以使用恒等函数，二元分类问题可以使用sigmoid函数，多元分类问题可以使用softmax函数。
+
+
+### 3.4.3 代码实现小结
+```python
+def init_network():
+    network = {}
+    network['W1'] = np.array([[0.1, 0.3, 0.5], [0.2, 0.4, 0.6]])
+    network['b1'] = np.array([0.1, 0.2, 0.3])
+    network['W2'] = np.array([[0.1, 0.4], [0.2, 0.5], [0.3, 0.6]])
+    network['b2'] = np.array([0.1, 0.2])
+    network['W3'] = np.array([[0.1, 0.3], [0.2, 0.4]])
+    network['b3'] = np.array([0.1, 0.2])
+    return network
+
+def forward(network, x):
+    W1, W2, W3 = network['W1'], network['W2'], network['W3']
+    b1, b2, b3 = network['b1'], network['b2'], network['b3']
+
+	a1 = np.dot(x, W1) + b1
+	z1 = sigmoid(a1)
+	a2 = np.dot(z1, w2) + b2
+	z2 = sigmoid(a2)
+	a3 = np.dot(z2, w3) + b3
+	y = identity_function(a3)
+
+	return y
+
+network = init_network()
+x = np.array([1.0, 0.5])
+y = forward(network, x)
+print(y) # [0.31682708  0.69627909]
+```
+上面定义了`init_network()`和`forward()`函数。`init_network()`函数会进行权重和偏置的初始化，并将它们保存在字典变量network中。这个字典变量network中保存了每一层所需的参数（权重和偏置）。`forward()`函数（表示的是从输入到输出方向的传递处理）中则封装了将输入信号转换为输出信号的处理过程。
+
+
+
+
 
 
 
