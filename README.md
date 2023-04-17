@@ -36,6 +36,11 @@
         - [3.4.1 符号确认](#341-符号确认)
         - [3.4.2 各层间信号传递的实现](#342-各层间信号传递的实现)
         - [3.4.3 代码实现小结](#343-代码实现小结)
+    - [3.5 输出层设计](#35-输出层设计)
+        - [3.5.1 恒等函数和softmax函数](#351-恒等函数和softmax函数)
+        - [3.5.2 实现softmax函数时的注意事项](#352-实现softmax函数时的注意事项)
+        - [3.5.3 softmax函数的特征](#353-softmax函数的特征)
+        - [3.5.4 输出层的神经元数量](#354-输出层的神经元数量)
 
 <!-- /TOC -->
 # 1 Python知识预备
@@ -568,16 +573,55 @@ print(y) # [0.31682708  0.69627909]
 ```
 上面定义了`init_network()`和`forward()`函数。`init_network()`函数会进行权重和偏置的初始化，并将它们保存在字典变量network中。这个字典变量network中保存了每一层所需的参数（权重和偏置）。`forward()`函数（表示的是从输入到输出方向的传递处理）中则封装了将输入信号转换为输出信号的处理过程。
 
+## 3.5 输出层设计
+### 3.5.1 恒等函数和softmax函数
+> 恒等函数会将输入按原样输出，对于输入的信息，不加以任何改动地直接输出。
 
+![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1681735934458-b2cd7956-824d-4541-9c3a-a88ee9095782.png#averageHue=%23414141&clientId=u05e7a439-d16b-4&from=paste&height=224&id=ud3f43a09&name=image.png&originHeight=280&originWidth=359&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=18699&status=done&style=none&taskId=u3ff15381-92bf-44bb-a205-44776367db3&title=&width=287.2)
 
+分类问题中使用的softmax函数可以用下面的数学式表示。<br />$y_k = \frac{e^{a_k}}{\sum_{i=1}^ne^{a_i}}$<br />这个式子表示假设输出层共有n个神经元，计算第k个神经元的输出$y_k$。分子是输入信号$a_k$的指数函数，分母是所有输入信号的指数函数的和。softmax函数的图示如下。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1681736253756-5d6e7f44-0786-4110-8295-74d023641600.png#averageHue=%23424242&clientId=u05e7a439-d16b-4&from=paste&height=225&id=u1bb2d82b&name=image.png&originHeight=281&originWidth=295&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=24835&status=done&style=none&taskId=u8af574ca-7cec-4c2f-8a56-8e5df98d5fb&title=&width=236)<br />softmax函数的输出通过箭头与所有的输入信号相连。从上面的数学式可以看出，输出层的各个神经元都受到所有输入信号的影响。
 
+用Python解释器实现softmax函数如下。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1681736653152-203f8efc-7a75-4824-9c75-2b02a03a99e0.png#averageHue=%23373b43&clientId=u05e7a439-d16b-4&from=paste&height=236&id=u841780ba&name=image.png&originHeight=295&originWidth=464&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=27633&status=done&style=none&taskId=ub3278667-81bf-4c75-a14f-15eacb9af39&title=&width=371.2)<br />将其封装为`softmax()`函数。
+```python
+def softmax(a):
+    exp_a = np.exp(a)
+    sum_exp_a = np.sum(exp_a)
+    y = exp_a / sum_exp_a
+	return y
+```
 
+### 3.5.2 实现softmax函数时的注意事项
+为了防止指数计算时的溢出，softmax函数的实现可以如下改进。<br />$y_k = \frac{e^{a_k}}{\sum_{i=1}^ne^{a_i}} = \frac{Ce^{a_k}}{C\sum_{i=1}^ne^{a_i}} = \frac{e^{a_k+lnC}}{\sum_{i=1}^ne^{a_i+lnC}} = \frac{e^{a_k+C'}}{\sum_{i=1}^ne^{a_i+C'}}(其中，C'=lnC)$
 
+这里的`C'`可以使用任何值，但是为了防止溢出，一般会使用输入信号中的最大值。具体实例如下。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1681737161062-116991db-71ec-475a-a3dc-28c978f761db.png#averageHue=%23343840&clientId=u05e7a439-d16b-4&from=paste&height=214&id=u50e56a02&name=image.png&originHeight=267&originWidth=831&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=30728&status=done&style=none&taskId=u61af6bc7-eb73-434e-aab0-04cae6a74f1&title=&width=664.8)<br />如该例所示，通过减去输入信号中的最大值（上例中的c），我们发现原本为nan（not a number，不确定）的地方，现在被正确计算了。综上，softmax函数可以优化如下。
+```python
+def softmax(a):
+    c = np.max(a)
+    exp_a = np.exp(a - c)
+    sum_exp_a = np.sum(exp_a)
+    y = exp_a / sum_exp_a
+	return y
+```
 
+### 3.5.3 softmax函数的特征
+使用`softmax()`函数可以按如下方式计算神经网络的输出。
+```python
+import numpy as np
 
+a = np.array([0.3, 2.9, 4.0])
+y = softmax(a)
+print(y)
+sum_y = np.sum(y)
+print(sum_y)
+```
+输出结果：![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1681737713902-efca57fb-a496-4530-bdd2-d62233921ba6.png#averageHue=%23253036&clientId=u05e7a439-d16b-4&from=paste&height=70&id=u06743c5d&name=image.png&originHeight=87&originWidth=862&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=16499&status=done&style=none&taskId=uce62d9c4-c8d4-4f65-8139-02889311301&title=&width=689.6)<br />如上所示，softmax函数的输出是0.0到1.0之间的实数。并且，softmax函数的输出值的总和是1。输出总和为1是softmax函数的一个重要性质。正因为有了这个性质，我们才可以把softmax函数的输出解释为“概率”。
 
+一般而言，神经网络只把输出值最大的神经元所对应的类别作为识别结果。并且，即便使用softmax函数，输出值最大的神经元的位置也不会变。因此，神经网络在进行分类时，输出层的softmax函数可以省略。
 
+### 3.5.4 输出层的神经元数量
+> 输出层的神经元数量需要根据待解决的问题来决定。对于分类问题，输出层的神经元数量一般设定为类别的数量。
 
+比如，对于某个输入图像，预测是图中的数字0到9中的哪一个的问题（10类别分类问题），可以像下图这样，将输出层的神经元设定为10个。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1681737983461-d7d91e85-9f59-4e2f-8e87-c93efc5d1208.png#averageHue=%23414141&clientId=u05e7a439-d16b-4&from=paste&height=339&id=u0c7f65eb&name=image.png&originHeight=424&originWidth=777&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=39871&status=done&style=none&taskId=u21ab90e8-8975-462a-a855-eea2fcb9bac&title=&width=621.6)<br />如上图所示，输出层的神经元从上往下依次对应数字0, 1, . . ., 9。此外，图中输出层的神经元的值用不同的灰度表示。这个例子中神经元y2颜色最深，输出的值最大。这表明这个神经网络预测的是y2对应的类别，也就是“2”。
 
 
 
