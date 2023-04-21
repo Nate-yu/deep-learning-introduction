@@ -57,6 +57,8 @@
         - [4.3.2 数值微分的例子](#432-数值微分的例子)
         - [4.3.3 偏导数](#433-偏导数)
     - [4.4 梯度](#44-梯度)
+        - [4.4.1 梯度法](#441-梯度法)
+        - [4.4.2 神经网络的梯度](#442-神经网络的梯度)
 
 <!-- /TOC -->
 # 1 Python知识预备
@@ -1077,15 +1079,126 @@ if __name__ == '__main__':
 
 ![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1682068570155-649f67d5-8ec3-42ac-b59b-9b7476e022b3.png#averageHue=%23f6f6f6&clientId=uc6be4a61-1f40-4&from=paste&height=480&id=uce95b296&name=image.png&originHeight=600&originWidth=800&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=88822&status=done&style=none&taskId=u42af958e-b390-48c7-ba5a-b8f2d7ea542&title=&width=640)
 
+### 4.4.1 梯度法
+> 通过巧妙地使用梯度来寻找函数最小值（或者尽可能小的值）的方法就是梯度法。通过不断地沿梯度方向前进，
+> 逐渐减小函数值的过程就是梯度法（gradient method）。
+
+这里的梯度表示的是各点处的函数值减小最多的方向。寻找最小值的梯度法称为梯度下降法（gradient descent method），<br />寻找最大值的梯度法称为梯度上升法（gradient ascent method）。
+
+下面用数学式来表示梯度法。<br />![](https://cdn.nlark.com/yuque/__latex/5cecbce9f0330b69f8ad835c8f7af65e.svg#card=math&code=x_0%20%3D%20x_0%20-%20%5Ceta%5Cfrac%7B%5Cpartial%20f%7D%7B%5Cpartial%20x_0%7D%20%5Cquad%20x_1%3Dx_1-%5Ceta%5Cfrac%7B%5Cpartial%20f%7D%7B%5Cpartial%20x_1%7D&id=qYYT5)<br />上式中，![](https://cdn.nlark.com/yuque/__latex/96b0657b0bd8ddf567b3f27d8ad467e6.svg#card=math&code=%5Ceta%0A&id=KwB2K)表示更新量，在神经网络的学习中，称为学习率（learning rate）。学习率决定在一次学习中，应该学习多少，以及在多大程度上更新参数。
+
+用Python实现梯度下降法
+```python
+def gradient_descent(f, init_x, lr = 0.01, step_num = 100):
+    x = init_x
+    x_history = []
 
 
+    for i in range(step_num):
+        x_history.append(x.copy())
+
+        grad = numerical_gradient(f,x)
+        x -= lr * grad
+        
+    return x, np.array(x_history)
+```
+参数`f`是要进行最优化的函数，`init_x`是初始值，`lr`是学习率learning rate，`step_num`是梯度法的重复次数。`numerical_gradient(f,x)`会求函数的梯度，用该梯度乘以学习率得到的值进行更新操作，由`step_num`指定重复的次数。
+
+下面用梯度法求函数![](https://cdn.nlark.com/yuque/__latex/c0983a6809880f591e5e1dfa55306a5b.svg#card=math&code=f%28x_0%2Bx_1%29%20%3D%20x_0%5E2%2Bx_1%5E2&id=CZcCn)的最小值
+```python
+import numpy as np
+import matplotlib.pylab as plt
+from gradient_2d import numerical_gradient
+
+def gradient_descent(f, init_x, lr = 0.01, step_num = 100):
+    x = init_x
+    x_history = []
+
+    for i in range(step_num):
+        x_history.append(x.copy())
+
+        grad = numerical_gradient(f,x)
+        x -= lr * grad
+
+    return x, np.array(x_history)
+
+def function_2(x):
+    return x[0]**2 + x[1]**2
+
+init_x = np.array([-3.0, 4.0])
+
+lr = 0.1
+step_num = 20
+x, x_history = gradient_descent(function_2, init_x, lr=lr, step_num=step_num)
+
+plt.plot([-5, 5], [0,0], '--b')
+plt.plot( [0,0], [-5, 5], '--b')
+plt.plot(x_history[:,0], x_history[:,1], 'o')
+
+plt.xlim(-3.5, 3.5)
+plt.ylim(-4.5, 4.5)
+plt.xlabel("X0")
+plt.ylabel("X1")
+plt.show()
+```
+
+![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1682077455478-f1190231-f757-4e5f-9e3a-eb6e8e8ffa7d.png#averageHue=%23fcfcfc&clientId=u4287f989-f779-4&from=paste&height=480&id=u62cd216a&name=image.png&originHeight=600&originWidth=800&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=16645&status=done&style=none&taskId=uabc156d8-43a3-4c54-8ee0-d7c6800a936&title=&width=640)
+
+注意：实验结果表明，学习率过大的话，会发散成一个很大的值；反过来，学习率过小的话，基本上没怎么更新就结束了。也就是说，设定合适的学习率是一个很重要的问题。
+
+### 4.4.2 神经网络的梯度
+> 神经网络的学习也要求梯度。这里所说的梯度是指损失函数关于权重参数的梯度。
+
+比如，有一个只有一个形状为 2 × 3 的权重 W 的神经网络，损失函数用 L 表示。此时，梯度可以用![](https://cdn.nlark.com/yuque/__latex/36e5597d13be0b891d1dbb4a7b2f5f0d.svg#card=math&code=%5Cfrac%7B%5Cpartial%20L%7D%7B%5Cpartial%20W%7D&id=RhceS)表示。数学式如下。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1682077691375-f35f6560-958b-4f4f-b60a-c611e1107d44.png#averageHue=%23414141&clientId=u4287f989-f779-4&from=paste&height=149&id=ua5c3a116&name=image.png&originHeight=186&originWidth=392&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=21322&status=done&style=none&taskId=u27eb31d3-56e9-4e52-a495-27b6975e0ea&title=&width=313.6)<br />![](https://cdn.nlark.com/yuque/__latex/36e5597d13be0b891d1dbb4a7b2f5f0d.svg#card=math&code=%5Cfrac%7B%5Cpartial%20L%7D%7B%5Cpartial%20W%7D&id=AgjU9)的元素由各个元素关于 W 的偏导数构成。下面以一个简单的神经网络为例，来实现求梯度的代码。
+```python
+import sys, os
+sys.path.append("D:\Download\ProgrammingTools\VSCode\CodeWorkSpace\deep-learning-introduction")  # 为了导入父目录的文件而进行的设定
+import numpy as np
+from common.functions import softmax, cross_entropy_error
+from common.gradient import numerical_gradient
 
 
+class simpleNet:
+    def __init__(self):
+        self.W = np.random.randn(2,3)
 
 
+    def predict(self, x):
+        return np.dot(x, self.W)
 
 
+    def loss(self, x, t):
+        z = self.predict(x)
+        y = softmax(z)
+        loss = cross_entropy_error(y,t)
 
+
+        return loss
+```
+	这里使用了 common/functions.py 中的`softmax`和`cross_entropy_error`方法，以及common/gradient.py中的`numerical_gradient`方法。simpleNet类只有一个实例变量，即形状为2×3的权重参数。它有两个方法，一个是用于预测的`predict(x)`，另一个是用于求损失函数值的`loss(x,t)`。这里参数`x`接收输入数据，`t`接收正确解标签。
+
+下面来使用`simpleNet`。
+```python
+x = np.array([0.6, 0.9])
+t = np.array([0, 0, 1]) # 正确解标签
+
+net = simpleNet()
+print(net.W) # 权重参数
+
+p = net.predict(x)
+print(p)
+print(np.argmax(p)) # 最大值的索引
+print(net.loss(x,t))
+```
+![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1682078741991-d3dd415d-a24e-42dd-8da1-0d3f4ac96744.png#averageHue=%2328333a&clientId=u4287f989-f779-4&from=paste&height=98&id=u4ac4ff76&name=image.png&originHeight=123&originWidth=442&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=17176&status=done&style=none&taskId=u2657d7cb-891c-4e8c-b377-c1b45671d49&title=&width=353.6)
+
+接下来求梯度。使用`numerical_gradient(f, x)`求梯度（这里定义的函数f(W)的参数W是一个伪参数。因为`numerical_gradient(f, x)`会在内部执行f(x),为了与之兼容而定义了f(W)）。
+```python
+f = lambda w: net.loss(x,t)
+dW = numerical_gradient(f, net.W)
+print(dW)
+```
+![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1682078877356-d8b13634-9af2-42f6-ab0a-b5b29de9ccce.png#averageHue=%232c3d45&clientId=u4287f989-f779-4&from=paste&height=50&id=ud3d91515&name=image.png&originHeight=62&originWidth=406&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=10340&status=done&style=none&taskId=uf8755009-d9a1-4fcc-b28f-6b72b55065c&title=&width=324.8)<br />`numerical_gradient(f, x)`的参数`f`是函数，`x`是传给函数`f`的参数。因此，这里参数`x`取`net.W`，并定义一个计算损失函数的新函数`f`，然后把这个新定义的函数传递给`numerical_gradient(f, x)`。`numerical_gradient(f, net.W)`的结果是`dW`，一个形状为2 × 3的二维数组。
 
 
 
