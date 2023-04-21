@@ -52,6 +52,11 @@
         - [4.2.2 交叉熵误差](#422-交叉熵误差)
         - [4.2.3 mini-batch学习](#423-mini-batch学习)
         - [4.2.4 mini-batch版交叉熵误差的实现](#424-mini-batch版交叉熵误差的实现)
+    - [4.3 数值微分](#43-数值微分)
+        - [4.3.1 导数](#431-导数)
+        - [4.3.2 数值微分的例子](#432-数值微分的例子)
+        - [4.3.3 偏导数](#433-偏导数)
+    - [4.4 梯度](#44-梯度)
 
 <!-- /TOC -->
 # 1 Python知识预备
@@ -185,14 +190,14 @@ plt.show()
 ## 2.1 感知机的定义
 > 感知机接收多个输入信号，输出一个信号。
 
-和实际的电流不同的是，感知机的信号只有“流/不流”（1/0）两种取值。0对应“不传递信号”，1对应“传递信号”。如下图所示是一个接收两个输入信号的感知机的例子。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1681440819573-d2627755-1569-47c2-9fe4-df8fea50fd57.png#averageHue=%23414141&clientId=u3972c055-bc56-4&from=paste&height=419&id=u6bf328c9&name=image.png&originHeight=524&originWidth=1493&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=35135&status=done&style=none&taskId=u9214393e-87a7-4342-ba07-825d3de6f98&title=&width=1194.4)<br />其中，x1、x2是输入信号，y 是输出信号，w1、w2是权重。图中的圆称为“神经元”或者“节点”。输入信号被送往神经元时，会被分别乘以固定的权重（w1x1、w2x2）。神经元会计算传送过来的信号的总和，只有当这个总和超过了某个界限值时，才会输出1。这也称为“神经元被激活” 。这里将这个界限值称为阈值，用符号θ表示。<br />上述即为感知机的运行原理，用数学公式表示即为如下：<br />$y= \begin{cases}0 \quad (w_1x_1 + w_2x_2\le\theta)\\ 1\quad (w_1x_1+w_2x_2>\theta)\end{cases}$<br />感知机的多个输入信号都有各自固有的权重，这些权重发挥着控制各个信号的重要性的作用。即权重越大，对应该权重的信号的重要性就越高。
+和实际的电流不同的是，感知机的信号只有“流/不流”（1/0）两种取值。0对应“不传递信号”，1对应“传递信号”。如下图所示是一个接收两个输入信号的感知机的例子。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1681440819573-d2627755-1569-47c2-9fe4-df8fea50fd57.png#averageHue=%23414141&clientId=u3972c055-bc56-4&from=paste&height=419&id=u6bf328c9&name=image.png&originHeight=524&originWidth=1493&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=35135&status=done&style=none&taskId=u9214393e-87a7-4342-ba07-825d3de6f98&title=&width=1194.4)<br />其中，x1、x2是输入信号，y 是输出信号，w1、w2是权重。图中的圆称为“神经元”或者“节点”。输入信号被送往神经元时，会被分别乘以固定的权重（w1x1、w2x2）。神经元会计算传送过来的信号的总和，只有当这个总和超过了某个界限值时，才会输出1。这也称为“神经元被激活” 。这里将这个界限值称为阈值，用符号θ表示。<br />上述即为感知机的运行原理，用数学公式表示即为如下：<br />![](https://cdn.nlark.com/yuque/__latex/b5414eef4b7284e5f0a28b65fa4257db.svg#card=math&code=y%3D%20%5Cbegin%7Bcases%7D0%20%5Cquad%20%28w_1x_1%20%2B%20w_2x_2%5Cle%5Ctheta%29%5C%5C%201%5Cquad%20%28w_1x_1%2Bw_2x_2%3E%5Ctheta%29%5Cend%7Bcases%7D&id=UYdgq)<br />感知机的多个输入信号都有各自固有的权重，这些权重发挥着控制各个信号的重要性的作用。即权重越大，对应该权重的信号的重要性就越高。
 
 ## 2.2 简单逻辑电路
 > 与门：与门是有两个输入和一个输出的门电路。
 
 下表这种输入信号和输出信号的对应表称为“真值表”。与门仅在两个输入均为1输出1，其他时候则输出0。
 
-| $x_1$ | $x_2$ | $y$ |
+| ![](https://cdn.nlark.com/yuque/__latex/0e8831d88c93179dbe6c8b5e3678ca20.svg#card=math&code=x_1&id=dGM7P) | ![](https://cdn.nlark.com/yuque/__latex/b526050a1759d2db5c1ae7e883a48312.svg#card=math&code=x_2&id=eSeEX) | ![](https://cdn.nlark.com/yuque/__latex/947eb82adf8e060dd9e14a2ced68c45a.svg#card=math&code=y%0A&id=AxfoL) |
 | --- | --- | --- |
 | 0 | 0 | 0 |
 | 1 | 0 | 0 |
@@ -204,7 +209,7 @@ plt.show()
 
 用真值表表示的话，如下表所示，仅当x1和x2同时为1时输出0，其他时候则输出1。
 
-| $x_1$ | $x_2$ | $y$ |
+| ![](https://cdn.nlark.com/yuque/__latex/0e8831d88c93179dbe6c8b5e3678ca20.svg#card=math&code=x_1&id=wTv9h) | ![](https://cdn.nlark.com/yuque/__latex/b526050a1759d2db5c1ae7e883a48312.svg#card=math&code=x_2&id=Z60st) | ![](https://cdn.nlark.com/yuque/__latex/947eb82adf8e060dd9e14a2ced68c45a.svg#card=math&code=y%0A&id=Rha2W) |
 | --- | --- | --- |
 | 0 | 0 | 1 |
 | 1 | 0 | 1 |
@@ -214,7 +219,7 @@ plt.show()
 
 > 或门：或门是“只要有一个输入信号是1，输出就为1”的逻辑电路。
 
-| $x_1$ | $x_2$ | $y$ |
+| ![](https://cdn.nlark.com/yuque/__latex/0e8831d88c93179dbe6c8b5e3678ca20.svg#card=math&code=x_1&id=ZQxqx) | ![](https://cdn.nlark.com/yuque/__latex/b526050a1759d2db5c1ae7e883a48312.svg#card=math&code=x_2&id=c8kdd) | ![](https://cdn.nlark.com/yuque/__latex/947eb82adf8e060dd9e14a2ced68c45a.svg#card=math&code=y%0A&id=dRINF) |
 | --- | --- | --- |
 | 0 | 0 | 0 |
 | 1 | 0 | 1 |
@@ -242,7 +247,7 @@ print(AND(1,1)) # 输出1
 ```
 定义一个接收参数x1和x2的AND函数，在函数内初始化参数w1, w2, theta，当输入的加权总和超过阈值时返回1，否则返回0。
 
-将 θ 换成 -b ，改写数学公式：<br />$y= \begin{cases}0 \quad (b+w_1x_1 + w_2x_2\le0)\\ 1\quad (b+w_1x_1+w_2x_2>0)\end{cases}$,此处，b称为**偏置**，w1和w2称为**权重**。<br />感知机会计算输入信号和权重的乘积，然后加上偏置，如果这个值大于0则输出1，否则输出0。使用NumPy逐一确认结果。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1681458245530-4e527aac-d5b0-4ef4-815b-04498c6f7ac9.png#averageHue=%231b1b1b&clientId=u21cf038b-070e-4&from=paste&height=230&id=u32b8a377&name=image.png&originHeight=287&originWidth=323&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=14235&status=done&style=none&taskId=u4efd5878-b72b-4457-9aca-bfc566e3d57&title=&width=258.4)<br />在NumPy数组的乘法运算中，当两个数组的元素个数相同时，各个元素分别相乘，因此`w*x`的结果就是它们的各个元素分别相乘（[0, 1] * [0.5, 0.5] => [0, 0.5]）。之后，`np.sum(w*x)`再计算相乘后的各个元素的总和。最后再把偏置加到这个加权总和上。
+将 θ 换成 -b ，改写数学公式：<br />![](https://cdn.nlark.com/yuque/__latex/801b525f01e66b7bdc6abb731efed4d1.svg#card=math&code=y%3D%20%5Cbegin%7Bcases%7D0%20%5Cquad%20%28b%2Bw_1x_1%20%2B%20w_2x_2%5Cle0%29%5C%5C%201%5Cquad%20%28b%2Bw_1x_1%2Bw_2x_2%3E0%29%5Cend%7Bcases%7D&id=WUYmS),此处，b称为**偏置**，w1和w2称为**权重**。<br />感知机会计算输入信号和权重的乘积，然后加上偏置，如果这个值大于0则输出1，否则输出0。使用NumPy逐一确认结果。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1681458245530-4e527aac-d5b0-4ef4-815b-04498c6f7ac9.png#averageHue=%231b1b1b&clientId=u21cf038b-070e-4&from=paste&height=230&id=u32b8a377&name=image.png&originHeight=287&originWidth=323&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=14235&status=done&style=none&taskId=u4efd5878-b72b-4457-9aca-bfc566e3d57&title=&width=258.4)<br />在NumPy数组的乘法运算中，当两个数组的元素个数相同时，各个元素分别相乘，因此`w*x`的结果就是它们的各个元素分别相乘（[0, 1] * [0.5, 0.5] => [0, 0.5]）。之后，`np.sum(w*x)`再计算相乘后的各个元素的总和。最后再把偏置加到这个加权总和上。
 
 使用权重和偏置实现与门逻辑电路
 ```python
@@ -314,7 +319,7 @@ if __name__ == '__main__':
 ## 2.4 感知机的局限性
 > 异或门：异或门也被称为逻辑异或电路，仅当x1或x2中的一方为1时，才会输出1（“异或”是拒绝其他的意思）。
 
-| $x_1$ | $x_2$ | $y$ |
+| ![](https://cdn.nlark.com/yuque/__latex/0e8831d88c93179dbe6c8b5e3678ca20.svg#card=math&code=x_1&id=QtMmL) | ![](https://cdn.nlark.com/yuque/__latex/b526050a1759d2db5c1ae7e883a48312.svg#card=math&code=x_2&id=lFtGD) | ![](https://cdn.nlark.com/yuque/__latex/947eb82adf8e060dd9e14a2ced68c45a.svg#card=math&code=y%0A&id=Z9G2O) |
 | --- | --- | --- |
 | 0 | 0 | 0 |
 | 1 | 0 | 1 |
@@ -326,7 +331,7 @@ if __name__ == '__main__':
 ## 2.5 多层感知机
 通过已有门电路的组合：<br />异或门的制作方法有很多，其中之一就是组合我们前面做好的与门、与非门、或门进行配置。与门，与非门，或门用如下图的符号表示<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1681472867117-0a56e39e-d4f8-4f59-8e22-04e15c093b6a.png#averageHue=%23414141&clientId=u21cf038b-070e-4&from=paste&height=167&id=ue80250b0&name=image.png&originHeight=209&originWidth=906&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=16198&status=done&style=none&taskId=ud6112002-d08f-405b-ae78-95dc944dd28&title=&width=724.8)<br />通过组合感知机（叠加层）就可以实现异或门。异或门可以通过如下所示配置来实现，这里，x1和x2表示输入信号，y表示输出信号，x1和x2是与非门和或门的输入，而与非门和或门的输出则是与门的输入。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1681473004376-abd7ade6-d849-4a66-81fb-5bc2fc6adc8c.png#averageHue=%23414141&clientId=u21cf038b-070e-4&from=paste&height=193&id=u01e5cafb&name=image.png&originHeight=241&originWidth=701&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=20588&status=done&style=none&taskId=u605abcec-265e-4d61-982f-8d0f5264084&title=&width=560.8)<br />验证正确性，把s1作为与非门的输出，把s2作为或门的输出，填入真值表
 
-| $x_1$ | $x_2$ | $s_1$ | $s_2$ | $y$ |
+| ![](https://cdn.nlark.com/yuque/__latex/0e8831d88c93179dbe6c8b5e3678ca20.svg#card=math&code=x_1&id=LGOAi) | ![](https://cdn.nlark.com/yuque/__latex/b526050a1759d2db5c1ae7e883a48312.svg#card=math&code=x_2&id=YzGbC) | ![](https://cdn.nlark.com/yuque/__latex/ca3cc99a77092b4a870a2ed346911759.svg#card=math&code=s_1&id=HfXlR) | ![](https://cdn.nlark.com/yuque/__latex/1ec65b375dec2920064daf545cb0476a.svg#card=math&code=s_2&id=ZauFg) | ![](https://cdn.nlark.com/yuque/__latex/947eb82adf8e060dd9e14a2ced68c45a.svg#card=math&code=y%0A&id=naEwl) |
 | --- | --- | --- | --- | --- |
 | 0 | 0 | 1 | 0 | 0 |
 | 1 | 0 | 1 | 1 | 1 |
@@ -366,7 +371,7 @@ if __name__ == '__main__':
 ## 3.1 从感知机到神经网络
 如下图所示，把最左边的一列称为**输入层**，最右边的一列称为**输出层**，中间的一列称为**中间层**。中间层有时候也被称为隐藏层。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1681561346694-117eab84-9dbd-4db3-8220-3d159886a29d.png#averageHue=%23424242&clientId=u664bfb51-2e30-4&from=paste&height=594&id=ue568955d&name=image.png&originHeight=742&originWidth=921&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=89516&status=done&style=none&taskId=u60bc8de4-886e-4cb5-8ac4-108055ab60e&title=&width=736.8)
 
-简化感知机数学式：$y=h(b+w_1x_1+w_2x_2)$，我们用一个函数来表示这种分情况的动作（超过0则输出1，否则输出0）。<br />$h(x) = \begin{cases} 0 \quad (x \le 0) \\ 1 \quad (x>0)\end{cases}$<br />输入信号的总和会被函数h(x)转换，转换后的值就是输出y。h（x）函数会将输入信号的总和转换为输出信号，这种函数一般称为激活函数（activation function）。其作用在于决定如何来激活输入信号的总和。<br />进一步来改进上式：<br />$(1) \quad a = b + w_1x_1 + w_2x_2$<br />$(2) \quad y = h(x)$<br />首先，式（1）计算加权输入信号和偏置的总和，记为a。然后，式（2）用h()函数将a转换为输出y。下图为明确显示激活函数的计算过程。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1681562541410-54919415-68b7-42d2-9f18-249e7b918385.png#averageHue=%23424242&clientId=u664bfb51-2e30-4&from=paste&height=307&id=u6f8e6ecf&name=image.png&originHeight=613&originWidth=689&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=43209&status=done&style=none&taskId=u07b64979-c9bc-4e91-bfb8-0c8817a31cd&title=&width=345)信号的加权总和为节点a，然后节点a被激活函数h()转换成节点y。
+简化感知机数学式：![](https://cdn.nlark.com/yuque/__latex/8fc00128696670950893256c60f16a21.svg#card=math&code=y%3Dh%28b%2Bw_1x_1%2Bw_2x_2%29&id=G7WZT)，我们用一个函数来表示这种分情况的动作（超过0则输出1，否则输出0）。<br />![](https://cdn.nlark.com/yuque/__latex/ce5f91ff43c8c12fcb79e91caf39a7ab.svg#card=math&code=h%28x%29%20%3D%20%5Cbegin%7Bcases%7D%200%20%5Cquad%20%28x%20%5Cle%200%29%20%5C%5C%201%20%5Cquad%20%28x%3E0%29%5Cend%7Bcases%7D&id=GoWvF)<br />输入信号的总和会被函数h(x)转换，转换后的值就是输出y。h（x）函数会将输入信号的总和转换为输出信号，这种函数一般称为激活函数（activation function）。其作用在于决定如何来激活输入信号的总和。<br />进一步来改进上式：<br />![](https://cdn.nlark.com/yuque/__latex/c0f2fc874d8df61947b105ef97705458.svg#card=math&code=%281%29%20%5Cquad%20a%20%3D%20b%20%2B%20w_1x_1%20%2B%20w_2x_2%20%0A&id=OLjcb)<br />![](https://cdn.nlark.com/yuque/__latex/ef7e54eae38bcb740b79e4a7f316c7f2.svg#card=math&code=%282%29%20%5Cquad%20y%20%3D%20h%28x%29%0A&id=zPld6)<br />首先，式（1）计算加权输入信号和偏置的总和，记为a。然后，式（2）用h()函数将a转换为输出y。下图为明确显示激活函数的计算过程。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1681562541410-54919415-68b7-42d2-9f18-249e7b918385.png#averageHue=%23424242&clientId=u664bfb51-2e30-4&from=paste&height=307&id=u6f8e6ecf&name=image.png&originHeight=613&originWidth=689&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=43209&status=done&style=none&taskId=u07b64979-c9bc-4e91-bfb8-0c8817a31cd&title=&width=345)信号的加权总和为节点a，然后节点a被激活函数h()转换成节点y。
 
 ![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1681562849199-b81a45ea-bca0-42c8-b842-b840280fb2f5.png#averageHue=%23414141&clientId=u664bfb51-2e30-4&from=paste&height=238&id=u0c9793c0&name=image.png&originHeight=298&originWidth=1316&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=38865&status=done&style=none&taskId=uc31b44f3-42b7-4582-8c50-cf0603cb52f&title=&width=1052.8)<br />左图是一般的神经元的图，右图是在神经元内部明确显示激活函数的计算过程的图（a表示输入信号的总和，h()表示激活函数，y表示输出）
 
@@ -377,7 +382,7 @@ if __name__ == '__main__':
 
 因此，可以说感知机中使用了阶跃函数作为激活函数。也就是说，在激活函数的众多候选函数中，感知机使用了阶跃函数。
 ### 3.2.1 sigmoid函数
-神经网络中经常使用的一个激活函数就是sigmoid函数：$h(x) = \frac{1}{1+e^{-x}}$。神经网络中用sigmoid函数作为激活函数，进行信号的转换，转换后的信号被传送给下一个神经元。神经元的多层<br />连接的构造、信号的传递方法等，基本上和感知机是一样的。
+神经网络中经常使用的一个激活函数就是sigmoid函数：![](https://cdn.nlark.com/yuque/__latex/1be52342616f44d85f79cc919cbc5401.svg#card=math&code=h%28x%29%20%3D%20%5Cfrac%7B1%7D%7B1%2Be%5E%7B-x%7D%7D&id=ANbZM)。神经网络中用sigmoid函数作为激活函数，进行信号的转换，转换后的信号被传送给下一个神经元。神经元的多层<br />连接的构造、信号的传递方法等，基本上和感知机是一样的。
 
 ### 3.2.2 阶跃函数的实现与图像
 当输入超过0时，输出1，否则输出0。可以像下面这样简单地实现阶跃函数。
@@ -472,7 +477,7 @@ plt.show()
 ### 3.2.5 ReLU函数
 > ReLU函数在输入大于0时，直接输出该值；在输入小于等于0时，输出0
 
-ReLU函数可以标识为下面的式子。<br />$h(x) = \begin{cases} x \quad (x > 0) \\ 0 \quad (x \le 0) \end{cases}$<br />ReLU函数可用如下代码实现。
+ReLU函数可以标识为下面的式子。<br />![](https://cdn.nlark.com/yuque/__latex/6cec56607874f29ef62dc3fe9f0670b1.svg#card=math&code=h%28x%29%20%3D%20%5Cbegin%7Bcases%7D%20x%20%5Cquad%20%28x%20%3E%200%29%20%5C%5C%200%20%5Cquad%20%28x%20%5Cle%200%29%20%5Cend%7Bcases%7D&id=p11G9)<br />ReLU函数可用如下代码实现。
 ```python
 def relu(x):
     return np.maximum(0,x)
@@ -498,10 +503,10 @@ maximum函数会从输入的数值中选择较大的那个值进行输出。ReLU
 3层神经网络示意图<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1681718849833-835a8ff6-5e78-4e74-b979-244ac9ec3a9e.png#averageHue=%23424242&clientId=u05e7a439-d16b-4&from=paste&height=349&id=ub68b167d&name=image.png&originHeight=436&originWidth=843&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=58696&status=done&style=none&taskId=ue9602726-24da-4a04-a051-0607c21680c&title=&width=674.4)<br />输入层有2个神经元，第1个隐藏层有3个神经元，第2个隐藏层有2个神经元，输出层有2个神经元
 
 ### 3.4.1 符号确认
-权重符号如下<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1681719977951-16438890-0340-4ff1-808d-51617a665b8b.png#averageHue=%23414141&clientId=u05e7a439-d16b-4&from=paste&height=307&id=ufa409226&name=image.png&originHeight=384&originWidth=830&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=50531&status=done&style=none&taskId=u1428a267-6e8d-48c9-bb10-9e9ae8a31a6&title=&width=664)<br />权重和隐藏层的神经元的右上角有一个“(1)”，表示权重和神经元的层号（即第1层的权重、第1层的神经元）。此外，权重的右下角有两个数字，它们是后一层的神经元和前一层的神经元的索引号。$w_{12}^{(1)}$表示前一层的第2个神经元$x_2$到后一层的第1个神经元$a_1^{(1)}$的权重。权重右下角按照“后一层的索引号、前一层的索引号”的顺序排列。
+权重符号如下<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1681719977951-16438890-0340-4ff1-808d-51617a665b8b.png#averageHue=%23414141&clientId=u05e7a439-d16b-4&from=paste&height=307&id=ufa409226&name=image.png&originHeight=384&originWidth=830&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=50531&status=done&style=none&taskId=u1428a267-6e8d-48c9-bb10-9e9ae8a31a6&title=&width=664)<br />权重和隐藏层的神经元的右上角有一个“(1)”，表示权重和神经元的层号（即第1层的权重、第1层的神经元）。此外，权重的右下角有两个数字，它们是后一层的神经元和前一层的神经元的索引号。![](https://cdn.nlark.com/yuque/__latex/08c3265a2052ba6be0de989d959b7eff.svg#card=math&code=w_%7B12%7D%5E%7B%281%29%7D&id=spxxh)表示前一层的第2个神经元![](https://cdn.nlark.com/yuque/__latex/9929b4550bf80849e3bbd9bdace8be77.svg#card=math&code=x_2%0A&id=FIRSh)到后一层的第1个神经元![](https://cdn.nlark.com/yuque/__latex/8e3351610d813c64e18b3c901bafc333.svg#card=math&code=a_1%5E%7B%281%29%7D&id=nxfxC)的权重。权重右下角按照“后一层的索引号、前一层的索引号”的顺序排列。
 
 ### 3.4.2 各层间信号传递的实现
-下面是输入层到第1层的第一个神经元的信号传递过程<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1681720475570-d9853296-24ca-46af-bc82-72792b2d10f2.png#averageHue=%23424242&clientId=u05e7a439-d16b-4&from=paste&height=419&id=ue9118699&name=image.png&originHeight=524&originWidth=860&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=90058&status=done&style=none&taskId=u30f68141-080c-407c-8406-fa898e751bb&title=&width=688)<br />上图中增加了表示偏置的神经元“1”。偏置的右下角的索引号只有一个，因为前一层的偏置神经元只有一个。<br />下面用数学式表示$a_1^{(1)}$通过加权信号和偏置的和按如下方式进行计算：$a_1^{(1)} = w_{11}^{1}x_1 + w_{12}^{(1)}x_2 + b_1^{(1)}$。此外，如果使用矩阵的乘法运算，则可以将第1层的加权表示成下面的式子：$\bm {A}^{(1)} = \bm{XW}^{(1)} + \bm{B}^{(1)}$，其中各元素如下所示<br />$\bm{A}^{(1)} = \begin{pmatrix}a_1^{(1)} & a_2^{(1)} & a_3^{(1)}\end{pmatrix}，\bm{X} = \begin{pmatrix} x_1 & x_2 \end{pmatrix}，\bm{B}^{(1)}=\begin{pmatrix} b_1^{(1)} & b_2^{(1)} & b_3^{(1)} \end{pmatrix}，W^{(1)} = \begin{pmatrix} w_{11}^{(1)} &w_{21}^{(1)} & w_{31}^{(1)} \\ w_{12}^{(1)} &w_{22}^{(1)} & w_{32}^{(1)}\end{pmatrix}$
+下面是输入层到第1层的第一个神经元的信号传递过程<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1681720475570-d9853296-24ca-46af-bc82-72792b2d10f2.png#averageHue=%23424242&clientId=u05e7a439-d16b-4&from=paste&height=419&id=ue9118699&name=image.png&originHeight=524&originWidth=860&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=90058&status=done&style=none&taskId=u30f68141-080c-407c-8406-fa898e751bb&title=&width=688)<br />上图中增加了表示偏置的神经元“1”。偏置的右下角的索引号只有一个，因为前一层的偏置神经元只有一个。<br />下面用数学式表示![](https://cdn.nlark.com/yuque/__latex/8e3351610d813c64e18b3c901bafc333.svg#card=math&code=a_1%5E%7B%281%29%7D&id=yagQ5)通过加权信号和偏置的和按如下方式进行计算：![](https://cdn.nlark.com/yuque/__latex/c77460825d40735a9a69fb0a277be610.svg#card=math&code=a_1%5E%7B%281%29%7D%20%3D%20w_%7B11%7D%5E%7B1%7Dx_1%20%2B%20w_%7B12%7D%5E%7B%281%29%7Dx_2%20%2B%20b_1%5E%7B%281%29%7D%0A&id=YXvL6)。此外，如果使用矩阵的乘法运算，则可以将第1层的加权表示成下面的式子：![](https://cdn.nlark.com/yuque/__latex/25e7c3556ab706b9587766023a7ee384.svg#card=math&code=%5Cbm%20%7BA%7D%5E%7B%281%29%7D%20%3D%20%5Cbm%7BXW%7D%5E%7B%281%29%7D%20%2B%20%5Cbm%7BB%7D%5E%7B%281%29%7D&id=Ir6RH)，其中各元素如下所示<br />![](https://cdn.nlark.com/yuque/__latex/3f100ca5bf0cb8a5bae7dadc67adcd1d.svg#card=math&code=%5Cbm%7BA%7D%5E%7B%281%29%7D%20%3D%20%5Cbegin%7Bpmatrix%7Da_1%5E%7B%281%29%7D%20%26%20a_2%5E%7B%281%29%7D%20%26%20a_3%5E%7B%281%29%7D%5Cend%7Bpmatrix%7D%EF%BC%8C%5Cbm%7BX%7D%20%3D%20%5Cbegin%7Bpmatrix%7D%20x_1%20%26%20x_2%20%5Cend%7Bpmatrix%7D%EF%BC%8C%5Cbm%7BB%7D%5E%7B%281%29%7D%3D%5Cbegin%7Bpmatrix%7D%20b_1%5E%7B%281%29%7D%20%26%20b_2%5E%7B%281%29%7D%20%26%20b_3%5E%7B%281%29%7D%20%5Cend%7Bpmatrix%7D%EF%BC%8CW%5E%7B%281%29%7D%20%3D%20%5Cbegin%7Bpmatrix%7D%20w_%7B11%7D%5E%7B%281%29%7D%20%26w_%7B21%7D%5E%7B%281%29%7D%20%26%20w_%7B31%7D%5E%7B%281%29%7D%20%5C%5C%20w_%7B12%7D%5E%7B%281%29%7D%20%26w_%7B22%7D%5E%7B%281%29%7D%20%26%20w_%7B32%7D%5E%7B%281%29%7D%5Cend%7Bpmatrix%7D&id=ogM9q)
 
 下面来用NumPy多维数组实现上面矩阵的乘法运算。（将输入信号、权重、偏置设置成任意值）
 ```python
@@ -590,7 +595,7 @@ print(y) # [0.31682708  0.69627909]
 
 ![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1681735934458-b2cd7956-824d-4541-9c3a-a88ee9095782.png#averageHue=%23414141&clientId=u05e7a439-d16b-4&from=paste&height=224&id=ud3f43a09&name=image.png&originHeight=280&originWidth=359&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=18699&status=done&style=none&taskId=u3ff15381-92bf-44bb-a205-44776367db3&title=&width=287.2)
 
-分类问题中使用的softmax函数可以用下面的数学式表示。<br />$y_k = \frac{e^{a_k}}{\sum_{i=1}^ne^{a_i}}$<br />这个式子表示假设输出层共有n个神经元，计算第k个神经元的输出$y_k$。分子是输入信号$a_k$的指数函数，分母是所有输入信号的指数函数的和。softmax函数的图示如下。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1681736253756-5d6e7f44-0786-4110-8295-74d023641600.png#averageHue=%23424242&clientId=u05e7a439-d16b-4&from=paste&height=225&id=u1bb2d82b&name=image.png&originHeight=281&originWidth=295&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=24835&status=done&style=none&taskId=u8af574ca-7cec-4c2f-8a56-8e5df98d5fb&title=&width=236)<br />softmax函数的输出通过箭头与所有的输入信号相连。从上面的数学式可以看出，输出层的各个神经元都受到所有输入信号的影响。
+分类问题中使用的softmax函数可以用下面的数学式表示。<br />![](https://cdn.nlark.com/yuque/__latex/0134ce5b3fbc81c86adc88f5c68176b4.svg#card=math&code=y_k%20%3D%20%5Cfrac%7Be%5E%7Ba_k%7D%7D%7B%5Csum_%7Bi%3D1%7D%5Ene%5E%7Ba_i%7D%7D&id=rAlb0)<br />这个式子表示假设输出层共有n个神经元，计算第k个神经元的输出![](https://cdn.nlark.com/yuque/__latex/48e6989aee378b0671dcbc11187f8dd6.svg#card=math&code=y_k&id=LP6cI)。分子是输入信号![](https://cdn.nlark.com/yuque/__latex/eb1130b86c0023f2fc1466c5f4664eb9.svg#card=math&code=a_k&id=t4PXG)的指数函数，分母是所有输入信号的指数函数的和。softmax函数的图示如下。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1681736253756-5d6e7f44-0786-4110-8295-74d023641600.png#averageHue=%23424242&clientId=u05e7a439-d16b-4&from=paste&height=225&id=u1bb2d82b&name=image.png&originHeight=281&originWidth=295&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=24835&status=done&style=none&taskId=u8af574ca-7cec-4c2f-8a56-8e5df98d5fb&title=&width=236)<br />softmax函数的输出通过箭头与所有的输入信号相连。从上面的数学式可以看出，输出层的各个神经元都受到所有输入信号的影响。
 
 用Python解释器实现softmax函数如下。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1681736653152-203f8efc-7a75-4824-9c75-2b02a03a99e0.png#averageHue=%23373b43&clientId=u05e7a439-d16b-4&from=paste&height=236&id=u841780ba&name=image.png&originHeight=295&originWidth=464&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=27633&status=done&style=none&taskId=ub3278667-81bf-4c75-a14f-15eacb9af39&title=&width=371.2)<br />将其封装为`softmax()`函数。
 ```python
@@ -602,7 +607,7 @@ def softmax(a):
 ```
 
 ### 3.5.2 实现softmax函数时的注意事项
-为了防止指数计算时的溢出，softmax函数的实现可以如下改进。<br />$y_k = \frac{e^{a_k}}{\sum_{i=1}^ne^{a_i}} = \frac{Ce^{a_k}}{C\sum_{i=1}^ne^{a_i}} = \frac{e^{a_k+lnC}}{\sum_{i=1}^ne^{a_i+lnC}} = \frac{e^{a_k+C'}}{\sum_{i=1}^ne^{a_i+C'}}(其中，C'=lnC)$
+为了防止指数计算时的溢出，softmax函数的实现可以如下改进。<br />![](https://cdn.nlark.com/yuque/__latex/d2ef4ae5f3b96de651302b78138bfba3.svg#card=math&code=y_k%20%3D%20%5Cfrac%7Be%5E%7Ba_k%7D%7D%7B%5Csum_%7Bi%3D1%7D%5Ene%5E%7Ba_i%7D%7D%20%3D%20%5Cfrac%7BCe%5E%7Ba_k%7D%7D%7BC%5Csum_%7Bi%3D1%7D%5Ene%5E%7Ba_i%7D%7D%20%3D%20%5Cfrac%7Be%5E%7Ba_k%2BlnC%7D%7D%7B%5Csum_%7Bi%3D1%7D%5Ene%5E%7Ba_i%2BlnC%7D%7D%20%3D%20%5Cfrac%7Be%5E%7Ba_k%2BC%27%7D%7D%7B%5Csum_%7Bi%3D1%7D%5Ene%5E%7Ba_i%2BC%27%7D%7D%28%E5%85%B6%E4%B8%AD%EF%BC%8CC%27%3DlnC%29&id=qNFH8)
 
 这里的`C'`可以使用任何值，但是为了防止溢出，一般会使用输入信号中的最大值。具体实例如下。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1681737161062-116991db-71ec-475a-a3dc-28c978f761db.png#averageHue=%23343840&clientId=u05e7a439-d16b-4&from=paste&height=214&id=u50e56a02&name=image.png&originHeight=267&originWidth=831&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=30728&status=done&style=none&taskId=u61af6bc7-eb73-434e-aab0-04cae6a74f1&title=&width=664.8)<br />如该例所示，通过减去输入信号中的最大值（上例中的c），我们发现原本为nan（not a number，不确定）的地方，现在被正确计算了。综上，softmax函数可以优化如下。
 ```python
@@ -814,7 +819,7 @@ print("Accuracy: "+str(float(accuracy_cnt) / len(x)))
 
 
 ### 4.2.1 均方误差
-均方误差（mean squared error）如下式所示。<br />$E = \frac{1}{2}\sum_k(y_k-t_k)^2$<br />在这里，$y_k$是表示神经网络的输出，$t_k$表示监督数据，k表示数据的维数。均方误差会计算神经网络的输出和正确解监督数据的各个元素之差的平方，再求总和。下面用Python实现均方误差。
+均方误差（mean squared error）如下式所示。<br />![](https://cdn.nlark.com/yuque/__latex/fb2e6d20d833b215ddd11b8e594d10a3.svg#card=math&code=E%20%3D%20%5Cfrac%7B1%7D%7B2%7D%5Csum_k%28y_k-t_k%29%5E2&id=VV4yq)<br />在这里，![](https://cdn.nlark.com/yuque/__latex/48e6989aee378b0671dcbc11187f8dd6.svg#card=math&code=y_k&id=lvWsl)是表示神经网络的输出，![](https://cdn.nlark.com/yuque/__latex/a53f422097657e8d1a469427a6ef2fe4.svg#card=math&code=t_k&id=TFjCJ)表示监督数据，k表示数据的维数。均方误差会计算神经网络的输出和正确解监督数据的各个元素之差的平方，再求总和。下面用Python实现均方误差。
 ```python
 def mean_squared_error(y, t):
     return 0.5 * np.sum((y-t)**2)
@@ -822,7 +827,7 @@ def mean_squared_error(y, t):
 这里参数 y 和 t 是NumPy数组。
 
 ### 4.2.2 交叉熵误差
-交叉熵误差（cross entropy error）如下式所示。<br />$E = -\sum_kt_klny_k$<br />这里，ln表示以e为敌的自然对数，$y_k$是神经网络输出，$t_k$是正确解标签。并且，$t_k$中只有正确解标签的索引为1，其他均为0。
+交叉熵误差（cross entropy error）如下式所示。<br />![](https://cdn.nlark.com/yuque/__latex/d230036acf9be5da1b6dd33a36fb1aff.svg#card=math&code=E%20%3D%20-%5Csum_kt_klny_k&id=WU60Y)<br />这里，ln表示以e为敌的自然对数，![](https://cdn.nlark.com/yuque/__latex/48e6989aee378b0671dcbc11187f8dd6.svg#card=math&code=y_k&id=bSF3E)是神经网络输出，![](https://cdn.nlark.com/yuque/__latex/a53f422097657e8d1a469427a6ef2fe4.svg#card=math&code=t_k&id=AimMJ)是正确解标签。并且，![](https://cdn.nlark.com/yuque/__latex/a53f422097657e8d1a469427a6ef2fe4.svg#card=math&code=t_k&id=pQQaa)中只有正确解标签的索引为1，其他均为0。
 
 因此，交叉熵误差实际上只计算正确解标签的输出的自然对数。也就是说，交叉熵误差的值是由正确解标签所对应的输出结果决定的。<br />自然对数图像如下如所示。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1682041946272-e35499c8-1b16-49ba-8e80-f69d8ee6dee4.png#averageHue=%23fcfcfc&clientId=u3bfb9bac-dc34-4&from=paste&height=480&id=u0668b88f&name=image.png&originHeight=600&originWidth=800&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=18983&status=done&style=none&taskId=u902c5ef3-bd76-4a6a-9a67-8eab603bbdf&title=&width=640)<br />x等于1时，y为0；随着x向0靠近，y逐渐变小。因此正确解标签对应的输出越大，CEE的值越接近0；当输出为1时，CEE为0。下面用Python实现交叉熵误差。
 ```python
@@ -835,7 +840,7 @@ def cross_entropy_error(y, t):
 使用`cross_entropy_error(y, t)`进行一些简单的计算<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1682044355295-44486e4f-b0b6-484a-ab7d-67a86408e6f7.png#averageHue=%2332363e&clientId=u3bfb9bac-dc34-4&from=paste&height=344&id=udfe6465d&name=image.png&originHeight=430&originWidth=841&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=42271&status=done&style=none&taskId=u189e2927-b556-4d1d-8654-ad2ef4d17ff&title=&width=672.8)<br />第一个例子中，正确解标签对应的输出为0.6，此时交叉熵误差大约为0.51。第二个例子中，正确解标签对应的输出为0.1的低值，此时的交叉熵误差大约为2.3。
 
 ### 4.2.3 mini-batch学习
-所有训练数据损失函数的总和，以交叉熵误差为例，可以写成下面的式子。<br />$E = -\frac{1}{N}\sum_n\sum_kt_{nk}lny_{nk}$<br />这里，假设数据有N个，$t_{nk}$表示第 n 个数据的第 k 个元素的值（$y_{nk}$是神经网络的输出，$t_{nk}$是监督数据）。
+所有训练数据损失函数的总和，以交叉熵误差为例，可以写成下面的式子。<br />![](https://cdn.nlark.com/yuque/__latex/3575c5274d7db760988043b84d24792c.svg#card=math&code=E%20%3D%20-%5Cfrac%7B1%7D%7BN%7D%5Csum_n%5Csum_kt_%7Bnk%7Dlny_%7Bnk%7D&id=aJlS3)<br />这里，假设数据有N个，![](https://cdn.nlark.com/yuque/__latex/285f0cdbe031a4f7e44332ccda355f94.svg#card=math&code=t_%7Bnk%7D&id=x3Iua)表示第 n 个数据的第 k 个元素的值（![](https://cdn.nlark.com/yuque/__latex/3588824c2810f242b22a9536d98a2d2b.svg#card=math&code=y_%7Bnk%7D&id=q9jUM)是神经网络的输出，![](https://cdn.nlark.com/yuque/__latex/285f0cdbe031a4f7e44332ccda355f94.svg#card=math&code=t_%7Bnk%7D&id=LkfCN)是监督数据）。
 
 神经网络的学习也是从训练数据中选出一批数据（称为mini-batch，小批量），然后对每个mini-batch进行学习。
 
@@ -888,6 +893,195 @@ def cross_entropy_error(y, t):
     return -np.sum(np.log(y[np.arange(batch_size), t] + 1e-7)) / batch_size
 ```
 实现的要点是，由于 one-hot 表示中 t 为0的元素的交叉熵误差也为0，因此针对这些元素的计算可以忽略。换言之，如果可以获得神经网络在正确解标签处的输出，就可以计算交叉熵误差。因此，t 为 one-hot 表示时通过`t * np.log(y)`计算的地方，在t为标签形式时，可用`np.log( y[np.arange (batch_size), t] )`实现相同的处理（为了便于观察，这里省略了微小值1e-7）。<br />`np.arange (batch_size)`会生成一个从0到 batch_size-1 的数组。比如当 batch_size 为 5 时，np.arange(batch_size) 会生成一个 NumPy 数组[0, 1, 2, 3, 4]。因为 t 中标签是以[2, 7, 0, 9, 4]的形式存储的，所以 y[np.arange(batch_size), t] 能抽出各个数据的正确解标签对应的神经网络的输出（在这个例子中，y[np.arange(batch_size), t]会 生 成 NumPy 数 组[y[0,2], y[1,7], y[2,0], y[3,9], y[4,4]]）。
+
+## 4.3 数值微分
+### 4.3.1 导数
+实现数值微分（数值梯度）
+```python
+def numerical_diff(f,x):
+    h = 1e-4
+    return (f(x+h) - f(x-h)) / (2 * h)
+```
+
+### 4.3.2 数值微分的例子
+尝试用数值微分对简单函数进行求导。<br />![](https://cdn.nlark.com/yuque/__latex/b385dfc9d0465063c27d9d1d49e373b4.svg#card=math&code=y%3D0.01x%5E2%2B0.1x&id=A9wa6)<br />用Python实现上式。
+```python
+def function_1(x):
+    return 0.01 * x ** 2 + 0.1 * x
+```
+
+绘制上式函数图像。
+```python
+x = np.arange(0.0,20.0,0.1)
+y = function_1(x)
+
+plt.xlabel("x")
+plt.ylabel("f(x)")
+plt.plot(x,y)
+plt.show()
+```
+
+![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1682063452294-da2838cd-7404-4d42-a435-537d670a78e5.png#averageHue=%23fcfcfc&clientId=uc6be4a61-1f40-4&from=paste&height=480&id=ue1f2c96f&name=image.png&originHeight=600&originWidth=800&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=21810&status=done&style=none&taskId=u51282eea-4a98-48e9-b3ff-ac7fa9d3851&title=&width=640)
+
+用上面的数值微分的值作为斜率，画一条直线。
+```python
+import numpy as np
+import matplotlib.pylab as plt
+
+def numerical_diff(f,x):
+    h = 1e-4
+    return (f(x+h) - f(x-h)) / (2 * h)
+
+def function_1(x):
+    return 0.01 * x ** 2 + 0.1 * x
+
+# f(x)在x处的切线
+def tangent_line(f,x):
+    # 切线在x处的斜率
+    k = numerical_diff(f,x) 
+    print(k)
+
+    # 切线截距
+    b = f(x) - k*x
+
+    # 返回一个lambda函数，它接受一个参数t，返回切线在t处的函数值。
+    return lambda t: k*t + b
+
+x = np.arange(0.0,20.0,0.1)
+y = function_1(x)
+
+tf = tangent_line(function_1, 5)
+y2 = tf(x)
+
+plt.xlabel("x")
+plt.ylabel("f(x)")
+# 曲线
+plt.plot(x,y)
+# 曲线的切线
+plt.plot(x,y2)
+plt.show()
+```
+
+x=5处的切线如下<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1682065463885-63e55d0e-89df-498a-a85d-eab0b74e63d2.png#averageHue=%23fcfcfb&clientId=uc6be4a61-1f40-4&from=paste&height=480&id=uaf7b73c5&name=image.png&originHeight=600&originWidth=800&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=27844&status=done&style=none&taskId=u9a56b707-5ac6-4de7-a399-a0e4e9141c4&title=&width=640)
+
+### 4.3.3 偏导数
+如下一个函数，有两个变量。<br />![](https://cdn.nlark.com/yuque/__latex/d40c8e25200796ee3e5d872374b72528.svg#card=math&code=f%28x_0%2Cx_1%29%20%3D%20x_0%5E2%2Bx_1%5E2&id=WWued)<br />用Python实现如下。
+```python
+def function_2(x):
+    return x[0] ** 2 + x[1] ** 2
+    # 或者 return np.sum(x**2)
+```
+
+函数图像如下图所示<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1682065831378-bc7e84ed-0f91-4893-ab6b-ee4098fed154.png#averageHue=%23fafafa&clientId=uc6be4a61-1f40-4&from=paste&height=480&id=u37a8a44e&name=image.png&originHeight=600&originWidth=800&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=153055&status=done&style=none&taskId=ub0b458ab-4322-4eaf-a150-ecc43b5ff09&title=&width=640)
+
+求偏导数<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1682066162084-9c39604d-c0cf-4a2c-a2dc-8993901259ef.png#averageHue=%23414141&clientId=uc6be4a61-1f40-4&from=paste&height=366&id=ub8b83a22&name=image.png&originHeight=457&originWidth=612&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=66679&status=done&style=none&taskId=u82c2e35a-3609-4c31-bdd0-ca11a0accc6&title=&width=489.6)<br />偏导数和单变量的导数一样，都是求某个地方的斜率。偏导数需要将多个变量中的某一个变量定为目标变量，并将其他变量固定为某个值。
+
+## 4.4 梯度
+> 像![](https://cdn.nlark.com/yuque/__latex/5344300fcb7e4e996670140397506570.svg#card=math&code=%28%5Cfrac%7B%5Cpartial%20f%7D%7B%5Cpartial%20x_0%7D%2C%20%5Cfrac%7B%5Cpartial%20f%7D%7B%5Cpartial%20x_1%7D%29&id=pfAZZ)这样由全部变量的偏导数汇总而成的向量称为梯度（gradient）
+
+梯度可以像下面这样实现。
+```python
+def numerical_gradient(f,x):
+    h = 1e-4
+    grad = np.zeros_like(x) # 生成和x形状相同的数组
+
+    for idx in range(x.size):
+        tmp_val = x[idx]
+
+        # f(x+h)的计算
+        x[idx] = tmp_val + h
+        fxh1 = f(x)
+
+        # f(x-h)的计算
+        x[idx] = tmp_val - h
+        fxh2 = f(x)
+        
+        grad[idx] = (fxh1 - fxh2) / (2 * h)
+        x[idx] = tmp_val # 还原值
+
+    return grad
+```
+函数`numerical_gradient(f, x)`中，参数`f`为函数，`x`为NumPy数组，该函数对NumPy数组`x`的各个元素求数值微分。
+
+把![](https://cdn.nlark.com/yuque/__latex/d40c8e25200796ee3e5d872374b72528.svg#card=math&code=f%28x_0%2Cx_1%29%20%3D%20x_0%5E2%2Bx_1%5E2&id=HLKMt)的梯度画在图上。
+```python
+import numpy as np
+import matplotlib.pylab as plt
+from mpl_toolkits.mplot3d import Axes3D
+
+def _numerical_gradient_no_batch(f, x):
+    h = 1e-4 # 0.0001
+    grad = np.zeros_like(x)
+    
+    for idx in range(x.size):
+        tmp_val = x[idx]
+        x[idx] = float(tmp_val) + h
+        fxh1 = f(x) # f(x+h)
+        
+        x[idx] = tmp_val - h 
+        fxh2 = f(x) # f(x-h)
+        grad[idx] = (fxh1 - fxh2) / (2*h)
+        
+        x[idx] = tmp_val # 还原值
+        
+    return grad
+
+def numerical_gradient(f,X):
+    if X.ndim == 1:
+        return _numerical_gradient_no_batch(f, X)
+    else:
+        grad = np.zeros_like(X)
+        
+        for idx, x in enumerate(X):
+            grad[idx] = _numerical_gradient_no_batch(f, x)
+        
+        return grad
+
+def function_2(x):
+    if x.ndim == 1:
+        return np.sum(x**2)
+    else:
+        return np.sum(x**2, axis=1)
+
+def tangent_line(f, x):
+    k = numerical_gradient(f, x)
+    print(k)
+    b = f(x) - k*x
+    return lambda t: k*t + b
+
+if __name__ == '__main__':
+    x0 = np.arange(-2, 2.5, 0.25)
+    x1 = np.arange(-2, 2.5, 0.25)
+
+    # 将x0和x1两个一维数组转换为二维数组X和Y，其中X和Y的行数分别等于x1和x0的长度
+    X, Y = np.meshgrid(x0, x1)
+    # 将X、Y数组展平为一维数组。这个操作的目的是为了将X和Y中的每个元素组合成一个二元组
+    X = X.flatten()
+    Y = Y.flatten()
+    
+    grad = numerical_gradient(function_2, np.array([X, Y]) )
+    
+    # 创建一个新的图形窗口
+    plt.figure()
+    # 用于绘制二维向量场，其中X和Y是网格点坐标，-grad[0]和-grad[1]是对应网格点处的梯度向量
+    plt.quiver(X, Y, -grad[0], -grad[1],  angles="xy",color="#666666")
+    plt.xlim([-2, 2])
+    plt.ylim([-2, 2])
+    plt.xlabel('x0')
+    plt.ylabel('x1')
+    plt.grid() # 显示网格线
+    plt.legend()
+    plt.draw()
+    plt.show()
+```
+
+![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1682068570155-649f67d5-8ec3-42ac-b59b-9b7476e022b3.png#averageHue=%23f6f6f6&clientId=uc6be4a61-1f40-4&from=paste&height=480&id=uce95b296&name=image.png&originHeight=600&originWidth=800&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=88822&status=done&style=none&taskId=u42af958e-b390-48c7-ba5a-b8f2d7ea542&title=&width=640)
+
+
+
+
+
+
 
 
 
