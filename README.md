@@ -59,6 +59,10 @@
     - [4.4 梯度](#44-梯度)
         - [4.4.1 梯度法](#441-梯度法)
         - [4.4.2 神经网络的梯度](#442-神经网络的梯度)
+    - [4.5 学习算法的实现](#45-学习算法的实现)
+        - [4.5.1 2层神经网络的类](#451-2层神经网络的类)
+        - [4.5.2 mini-batch的实现](#452-mini-batch的实现)
+        - [4.5.3 基于测试数据的评价](#453-基于测试数据的评价)
 
 <!-- /TOC -->
 # 1 Python知识预备
@@ -1199,6 +1203,228 @@ dW = numerical_gradient(f, net.W)
 print(dW)
 ```
 ![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1682078877356-d8b13634-9af2-42f6-ab0a-b5b29de9ccce.png#averageHue=%232c3d45&clientId=u4287f989-f779-4&from=paste&height=50&id=ud3d91515&name=image.png&originHeight=62&originWidth=406&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=10340&status=done&style=none&taskId=uf8755009-d9a1-4fcc-b28f-6b72b55065c&title=&width=324.8)<br />`numerical_gradient(f, x)`的参数`f`是函数，`x`是传给函数`f`的参数。因此，这里参数`x`取`net.W`，并定义一个计算损失函数的新函数`f`，然后把这个新定义的函数传递给`numerical_gradient(f, x)`。`numerical_gradient(f, net.W)`的结果是`dW`，一个形状为2 × 3的二维数组。
+
+## 4.5 学习算法的实现
+神经网络的学习步骤：
+
+1. mini-batch：从训练数据中随机选出一部分数据，这部分数据称为mini-batch。我们的目标是减小mini-batch的损失函数的值。
+2. 计算梯度：为了减小mini-batch的损失函数的值，需要求出各个权重参数的梯度。梯度表示损失函数的值减小最多的方向。
+3. 更新参数：将权重参数沿梯度方向进行微小更新。
+4. 重复上述三步
+
+因为这里使用的数据是随机选择的mini batch数据，所以又称为随机梯度下降法（stochastic gradient descent）
+
+### 4.5.1 2层神经网络的类
+首先将这个2层神经网络实现为一个名为`TwoLayerNet`的类。
+```python
+import sys, os
+sys.path.append("D:\Download\ProgrammingTools\VSCode\CodeWorkSpace\deep-learning-introduction")  # 为了导入父目录的文件而进行的设定
+import numpy as np
+from common.functions import *
+from common.gradient import numerical_gradient
+
+
+class TwoLayerNet:
+
+    def __init__(self, input_size, hidden_size, output_size, weight_init_std=0.01):
+        # 初始化权重
+        self.params = {}
+        self.params['W1'] = weight_init_std * np.random.randn(input_size, hidden_size)
+        self.params['b1'] = np.zeros(hidden_size)
+        self.params['W2'] = weight_init_std * np.random.randn(hidden_size, output_size)
+        self.params['b2'] = np.zeros(output_size)
+
+
+    def predict(self, x):
+        W1, W2 = self.params['W1'], self.params['W2']
+        b1, b2 = self.params['b1'], self.params['b2']
+
+        a1 = np.dot(x,W1) + b1
+        z1 = sigmoid(a1)
+        a2 = np.dot(z1,W2) + b2
+        y = softmax(a2)
+
+        return y
+    
+    # x: 输入数据，t: 监督数据
+    def loss(self, x, t):
+        y = self.predict(x)
+
+        return cross_entropy_error(y,t)
+    
+    def accuracy(self, x, t):
+        y = self.predict(x)
+        y = np.argmax(y, axis=1)
+        t = np.argmax(t, axis=1)
+
+        accuracy = np.sum(y == t) / float(x.shape[0])
+        return accuracy
+    
+    # x:输入数据, t:监督数据
+    def numerical_gradient(self, x, t):
+        loss_W = lambda W: self.loss(x, t)
+        
+        grads = {}
+        grads['W1'] = numerical_gradient(loss_W, self.params['W1'])
+        grads['b1'] = numerical_gradient(loss_W, self.params['b1'])
+        grads['W2'] = numerical_gradient(loss_W, self.params['W2'])
+        grads['b2'] = numerical_gradient(loss_W, self.params['b2'])
+        
+        return grads
+    
+    def gradient(self, x, t):
+        W1, W2 = self.params['W1'], self.params['W2']
+        b1, b2 = self.params['b1'], self.params['b2']
+        grads = {}
+        
+        batch_num = x.shape[0]
+
+        # forward
+        a1 = np.dot(x, W1) + b1
+        z1 = sigmoid(a1)
+        a2 = np.dot(z1, W2) + b2
+        y = softmax(a2)
+
+        # backward
+        dy = (y-t) / batch_num
+        grads['W2'] = np.dot(z1.T, dy)
+        grads['b2'] = np.sum(dy, axis=0)
+
+        da1 = np.dot(dy, W2.T)
+        dz1 = sigmoid_grad(a1) * da1
+        grads['W1'] = np.dot(x.T, dz1)
+        grads['b1'] = np.sum(dz1, axis=0)
+
+        return grads
+```
+
+下面两表罗列了重要的变量与所有方法。
+
+| 变量 | 说明 |
+| --- | --- |
+| params | 保存神经网络的参数的字典型变量（实例变量）。<br />params['W1']是第1层的权重，params['b1']是第1层的偏置。<br />params['W2']是第2层的权重，params['b2']是第2层的偏置 |
+| grads | 保存梯度的字典型变量（numerical_gradient()方法的返回值）。<br />grads['W1']是第1层权重的梯度，grads['b1']是第1层偏置的梯度。<br />grads['W2']是第2层权重的梯度，grads['b2']是第2层偏置的梯度 |
+
+
+| 方法 | 说明 |
+| --- | --- |
+| __init__(self, input_size, hidden_size, output_size) | 进行初始化。<br />参数从头开始依次表示输入层的神经元数、隐藏层的神经元数、输出层的神经元数 |
+| predict(self, x) | 进行识别（推理）。<br />参数x是图像数据 |
+| loss(self, x, t) | 计算损失函数的值。<br />参数x是图像数据，t是正确解标签（后面3个方法的参数也一样） |
+| accuracy(self, x, t) | 计算识别精度 |
+| numerical_gradient(self, x, t) | 计算权重参数的梯度 |
+| gradient(self, x, t) | 计算权重参数的梯度。<br />numerical_gradient()的高速版，将在下一章实现 |
+
+
+### 4.5.2 mini-batch的实现
+下面以TwoLayerNet类为对象，使用MNIST数据集进行学习。
+```python
+import numpy as np
+from dataset.mnist import load_mnist
+from two_layer_net import TwoLayerNet
+(x_train, t_train), (x_test, t_test) = \ load_mnist(normalize=True, one_hot_
+laobel = True)
+train_loss_list = []
+# 超参数
+iters_num = 10000
+train_size = x_train.shape[0]
+batch_size = 100
+learning_rate = 0.1
+
+
+network = TwoLayerNet(input_size=784, hidden_size=50, output_size=10)
+
+for i in range(iters_num):
+    # 获取mini-batch
+    batch_mask = np.random.choice(train_size, batch_size)
+    x_batch = x_train[batch_mask]
+    t_batch = t_train[batch_mask]
+    
+    # 计算梯度
+    grad = network.numerical_gradient(x_batch, t_batch)
+    # grad = network.gradient(x_batch, t_batch) # 高速版!
+    
+    # 更新参数
+    for key in ('W1', 'b1', 'W2', 'b2'):
+        network.params[key] -= learning_rate * grad[key]
+        
+    # 记录学习过程
+    loss = network.loss(x_batch, t_batch)
+    train_loss_list.append(loss)
+```
+随着学习的进行，损失函数的值在不断减小。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1682083105031-124190af-3611-4b6b-8f7a-89ec18bbcee7.png#averageHue=%23434343&clientId=u4287f989-f779-4&from=paste&height=346&id=u6160cfeb&name=image.png&originHeight=433&originWidth=879&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=57597&status=done&style=none&taskId=ub4571a2a-1753-4f8e-925c-d3b056d4788&title=&width=703.2)
+
+### 4.5.3 基于测试数据的评价
+神经网络的学习中，必须确认是否能够正确识别训练数据以外的其他数据，即确认是否会发生过拟合。
+> 过拟合：虽然训练数据中的数字图像能被正确辨别，但是不在训练数据中的数字图像却无法被识别的现象。
+
+
+epoch：一个单位。一个epoch表示学习中所有训练数据均被使用过一次时的更新次数。比如，对于10000笔训练数据，用大小为100笔数据的mini-batch进行学习时，重复随机梯度下降法100次，所有的训练数据就都被“看过”了A。此时，100次就是一个epoch。
+
+```python
+import sys, os
+sys.path.append("D:\Download\ProgrammingTools\VSCode\CodeWorkSpace\deep-learning-introduction")  # 为了导入父目录的文件而进行的设定
+import numpy as np
+import matplotlib.pylab as plt
+from dataset.mnist import load_mnist
+from two_layer_net import TwoLayerNet
+
+# 读入数据
+(x_train, t_train), (x_test, t_test) = load_mnist(normalize=True,one_hot_label=True)
+
+network = TwoLayerNet(input_size=784, hidden_size=50, output_size=10)
+
+# 超参数
+iters_num = 10000  # 适当设定循环的次数
+train_size = x_train.shape[0]
+batch_size = 100
+learning_rate = 0.1
+
+train_loss_list = []
+train_acc_list = []
+test_acc_list = []
+
+# 平均每个epoch的重复次数
+iter_per_epoch = max(train_size / batch_size, 1)
+
+for i in range(iters_num):
+    # 获取mini-batch
+    batch_mask = np.random.choice(train_size, batch_size)
+    x_batch = x_train[batch_mask]
+    t_batch = t_train[batch_mask]
+
+    # 计算梯度
+    #grad = network.numerical_gradient(x_batch, t_batch)
+    grad = network.gradient(x_batch, t_batch)
+
+    # 更新参数
+    for key in ('W1', 'b1', 'W2', 'b2'):
+        network.params[key] -= learning_rate * grad[key]
+
+    # 记录学习过程
+    loss = network.loss(x_batch, t_batch)
+    train_loss_list.append(loss)
+
+    # 计算每个epoch的识别精度
+    if i % iter_per_epoch == 0:
+        train_acc = network.accuracy(x_train, t_train)
+        test_acc = network.accuracy(x_test, t_test)
+        train_acc_list.append(train_acc)
+        test_acc_list.append(test_acc)
+        print("train acc, test acc | " + str(train_acc) + ", " + str(test_acc))
+
+# 绘制图形
+markers = {'train':'o','test':'s'}
+x = np.arange(len(train_acc_list))
+plt.plot(x, train_acc_list, label='train acc')
+plt.plot(x, test_acc_list, label='test acc', linestyle='--')
+plt.xlabel("epochs")
+plt.ylabel("accuracy")
+plt.ylim(0, 1.0)
+plt.legend(loc='lower right')
+plt.show()
+```
+每经过一个epoch，就对所有的训练数据和测试数据计算识别精度，并记录结果。之所以要计算每一个epoch的识别精度，是因为如果在for语句的循环中一直计算识别精度，会花费太多时间。因此，我们才会每经过一个epoch就记录一次训练数据的识别精度。<br />结果用图像表示。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1682083553496-ba1b6605-325d-4819-89f9-1f36915481dc.png#averageHue=%23fcfbfb&clientId=u4287f989-f779-4&from=paste&height=480&id=u8b6e3a59&name=image.png&originHeight=600&originWidth=800&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=28136&status=done&style=none&taskId=u26f71e52-7496-4569-ae28-b6239baa652&title=&width=640)<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1682083612377-489a093e-5464-4e9f-8b45-caec4869fe5f.png#averageHue=%23272f35&clientId=u4287f989-f779-4&from=paste&height=317&id=uee5c5dc3&name=image.png&originHeight=396&originWidth=836&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=69859&status=done&style=none&taskId=u3389a6ac-a3b7-4b85-8456-f61fe8d9ba9&title=&width=669)<br />实线表示训练数据的识别精度，虚线表示测试数据的识别精度。如图所示，随着epoch的前进（学习的进行），我们发现使用训练数据和测试数据评价的识别精度都提高了，并且，这两个识别精度基本上没有差异（两条线基本重叠在一起）。因此，可以说这次的学习中没有发生过拟合的现象。
 
 
 
