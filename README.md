@@ -63,6 +63,11 @@
         - [4.5.1 2层神经网络的类](#451-2层神经网络的类)
         - [4.5.2 mini-batch的实现](#452-mini-batch的实现)
         - [4.5.3 基于测试数据的评价](#453-基于测试数据的评价)
+- [5 误差反向传播法](#5-误差反向传播法)
+    - [5.1 计算图](#51-计算图)
+        - [5.1.1 用计算图求解](#511-用计算图求解)
+        - [5.1.2 局部计算](#512-局部计算)
+        - [5.1.3 为何用计算图解题](#513-为何用计算图解题)
 
 <!-- /TOC -->
 # 1 Python知识预备
@@ -1425,6 +1430,53 @@ plt.legend(loc='lower right')
 plt.show()
 ```
 每经过一个epoch，就对所有的训练数据和测试数据计算识别精度，并记录结果。之所以要计算每一个epoch的识别精度，是因为如果在for语句的循环中一直计算识别精度，会花费太多时间。因此，我们才会每经过一个epoch就记录一次训练数据的识别精度。<br />结果用图像表示。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1682083553496-ba1b6605-325d-4819-89f9-1f36915481dc.png#averageHue=%23fcfbfb&clientId=u4287f989-f779-4&from=paste&height=480&id=u8b6e3a59&name=image.png&originHeight=600&originWidth=800&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=28136&status=done&style=none&taskId=u26f71e52-7496-4569-ae28-b6239baa652&title=&width=640)<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1682083612377-489a093e-5464-4e9f-8b45-caec4869fe5f.png#averageHue=%23272f35&clientId=u4287f989-f779-4&from=paste&height=317&id=uee5c5dc3&name=image.png&originHeight=396&originWidth=836&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=69859&status=done&style=none&taskId=u3389a6ac-a3b7-4b85-8456-f61fe8d9ba9&title=&width=669)<br />实线表示训练数据的识别精度，虚线表示测试数据的识别精度。如图所示，随着epoch的前进（学习的进行），我们发现使用训练数据和测试数据评价的识别精度都提高了，并且，这两个识别精度基本上没有差异（两条线基本重叠在一起）。因此，可以说这次的学习中没有发生过拟合的现象。
+
+# 5 误差反向传播法
+## 5.1 计算图
+> 计算图将计算过程用图形表示出来。这里说的图形是数据结构图，通过多个节点和边表示（连接节点的直线称为“边”）。
+
+### 5.1.1 用计算图求解
+
+问题1：太郎在超市买了2个100日元一个的苹果，消费税是10%，请计算支付金额。
+
+计算图通过节点和箭头表示计算过程。将计算的中间结果写在箭头的上方，表示各个节点的计算结果从左向右传递。用计算图解问题1，求解过程如下图所示。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1682217736396-47e7d7b7-f852-4fc1-8243-c30143bc671e.png#averageHue=%23434343&clientId=ucd66bb0b-d041-4&from=paste&height=101&id=uda6ad531&name=image.png&originHeight=126&originWidth=864&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=23977&status=done&style=none&taskId=u6a65c6a1-8d35-47b9-9aa2-bebb3bca2ae&title=&width=691.2)<br />虽然上图中把“× 2”“× 1.1”等作为一个运算整体，不过只用⚪表示乘法运算“×”也是可行的。如下图所示，可以将“2”和“1.1”分别作为变量“苹果的个数”和“消费税”标在⚪外面。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1682217892520-4d1bca79-4e10-41de-82f2-8a0029f06531.png#averageHue=%23424242&clientId=ucd66bb0b-d041-4&from=paste&height=230&id=ubc729f19&name=image.png&originHeight=288&originWidth=863&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=34603&status=done&style=none&taskId=ue9340eab-2dea-447b-9e17-0479e2e8072&title=&width=690.4)
+
+问题2：太郎在超市买了2个苹果、3个橘子。其中，苹果每个100日元，橘子每个150日元。消费税是10%，请计算支付金额。
+
+用计算图解问题2，求解过程如下图所示。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1682217940376-62a35c3c-0561-4cdc-9e93-fa81bfd88b67.png#averageHue=%23424242&clientId=ucd66bb0b-d041-4&from=paste&height=295&id=u4f051ecc&name=image.png&originHeight=369&originWidth=860&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=50824&status=done&style=none&taskId=u3ea9ce03-802b-46e4-ae39-74a432086e5&title=&width=688)<br />这个问题新增了加法节点“+”，用来合计苹果和句子的金额。
+
+综上，用计算图解题需要按如下流程进行。
+
+1. 构建计算图
+2. 在计算图上，从左向右进行计算
+
+这里的“从左向右进行计算”是一种正方向上的传播，简称为正向传播（forward propagation）。正向传播是从计算图出发点到结束点的传播。既然有正向传播这个名称，当然也可以考虑反向（从图上看的话，就是从右向左）的传播。实际上，这种传播称为反向传播（backward propagation）。
+
+### 5.1.2 局部计算
+> 计算图的特征是可以通过传递“局部计算”获得最终结果。“局部”这个词的意思是“与自己相关的某个小范围”。
+
+局部计算是指，无论全局发生了什么，都能只根据与自己相关的信息输出接下来的结果。比如，在超市买了2个苹果和其他很多东西。此时，可以画出如下图所示的计算图。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1682219151864-fa12a912-3157-47bb-8ec2-cf896d32a8ea.png#averageHue=%23424242&clientId=ucd66bb0b-d041-4&from=paste&height=325&id=u95eaec7f&name=image.png&originHeight=406&originWidth=864&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=86793&status=done&style=none&taskId=u7b7af940-ec90-429a-b2d4-80d2da3fc8a&title=&width=691.2)<br />如上图所示，假设（经过复杂的计算）购买的其他很多东西总共花费4000日元。这里的重点是，各个节点处的计算都是局部计算。这意味着，例如苹果和其他很多东西的求和运算（4000 + 200 → 4200）并不关心4000这个数字是如何计算而来的，只要把两个数字相加就可以了。<br />换言之，各个节点处只需进行与自己有关的计算（在这个例子中是对输入的两个数字进行加法运算），不用考虑全局。
+
+综上，计算图可以集中精力于局部计算。无论全局的计算有多么复杂，各个步骤所要做的就是对象节点的局部计算。虽然局部计算非常简单，但是通过传递它的计算结果，可以获得全局的复杂计算的结果。
+
+### 5.1.3 为何用计算图解题
+计算图的优点
+
+1. 局部计算。无论全局是多么复杂的计算，都可以通过局部计算使各个节点致力于简单的计算，从而简化问题
+2. 利用计算图可以将中间的计算结果全部保存起来
+3. 可以通过反向传播高效计算导数
+
+对于上面的问题1，假设我们想知道苹果价格的上涨会在多大程度上影响最终的支付金额，即求“支付金额关于苹果的价格的导数”。设苹果价格为x，支付金额为L，则相当于求![](https://cdn.nlark.com/yuque/__latex/e9aacec8b15fc1e9462a4aaf873e6494.svg#card=math&code=%5Cfrac%7B%5Cpartial%20L%7D%7B%5Cpartial%20x%7D&id=Egv8b)。这个导数的值表示当苹果的价格稍微上涨时，支付金额会增加多少。<br />“支付金额关于苹果的价格的导数”的值可以通过计算图的反向传播求出来。可以通过计算图的反向传播求导数，具体过程如下图所示。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1682220985618-1ec231fb-cb9a-415b-9737-cb8276896356.png#averageHue=%23424242&clientId=ucd66bb0b-d041-4&from=paste&height=228&id=u451ef698&name=image.png&originHeight=285&originWidth=862&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=37376&status=done&style=none&taskId=ub78b151b-275c-4fe0-9ecc-82fba1f86fc&title=&width=689.6)<br />反向传播使用与正方向相反的箭头（粗线）表示。反向传播传递“局部导数”，将导数的值写在箭头的下方。从这个结果中可知，“支付金额关于苹果的价格的导数”的值是2.2。这意味着，如果苹果的价格上涨1日元，最终的支付金额会增加2.2日元
+
+计算中途求得的导数的结果（中间传递的导数）可以被共享，从而可以高效地计算多个导数。综上，计算图的优点是，可以通过正向传播和反向传播高效地计算各个变量的导数值。
+
+
+
+
+
+
+
+
 
 
 
