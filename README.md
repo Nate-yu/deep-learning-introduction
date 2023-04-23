@@ -68,6 +68,11 @@
         - [5.1.1 用计算图求解](#511-用计算图求解)
         - [5.1.2 局部计算](#512-局部计算)
         - [5.1.3 为何用计算图解题](#513-为何用计算图解题)
+    - [5.2 链式法则](#52-链式法则)
+        - [5.2.1 计算图的反向传播](#521-计算图的反向传播)
+        - [5.2.2 什么是链式法则](#522-什么是链式法则)
+        - [5.2.3 链式法则和计算图](#523-链式法则和计算图)
+    - [5.3 反向传播](#53-反向传播)
 
 <!-- /TOC -->
 # 1 Python知识预备
@@ -1470,8 +1475,19 @@ plt.show()
 
 计算中途求得的导数的结果（中间传递的导数）可以被共享，从而可以高效地计算多个导数。综上，计算图的优点是，可以通过正向传播和反向传播高效地计算各个变量的导数值。
 
+## 5.2 链式法则
+### 5.2.1 计算图的反向传播
+下面是一个使用计算图的反向传播的例子：假设存在 y = f(x) 的计算，这个计算的反向传播如下图所示。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1682236797803-9fc3a4a6-3dc2-456e-bf1a-d63e9b791a68.png#averageHue=%23414141&clientId=ue9c1380f-c053-4&from=paste&height=133&id=u1fd01d03&name=image.png&originHeight=166&originWidth=863&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=8526&status=done&style=none&taskId=u0831afa3-3ec6-4e47-af32-3f1a1483601&title=&width=690.4)<br />如上图所示，反向传播的顺序是，将信号 E 乘以结点的局部导数（![](https://cdn.nlark.com/yuque/__latex/c98403508ed4f41213e396ea80b4523e.svg#card=math&code=%5Cfrac%7B%5Cpartial%20y%7D%7B%5Cpartial%20x%7D&id=SChaU)），然后将结果传递给下一个节点。比如，假设![](https://cdn.nlark.com/yuque/__latex/59dc7bf9020e8e091817820c213cf062.svg#card=math&code=y%20%3D%20f%28x%29%3Dx%5E2&id=axdRv)，则局部导数为![](https://cdn.nlark.com/yuque/__latex/204c8e7879fad098a56a9c248d896df9.svg#card=math&code=%5Cfrac%7B%5Cpartial%20y%7D%7B%5Cpartial%20x%7D%3D2x&id=foJ7t)。把这个局部导数乘以上游传过来的值（E），然后传递给前面的节点。
 
+### 5.2.2 什么是链式法则
+> 链式法则是关于复合函数的导数的性质，定义如下：如果某个函数由复合函数表示，则该复合函数的导数可以用构成复合函数的各个函数的导数的乘积表示。
 
+以上就是链式法则的原理。假设有：![](https://cdn.nlark.com/yuque/__latex/e7a382bdb9fbb2165730bffc56c67c3e.svg#card=math&code=z%3Dt%5E2%2Ct%3Dx%2By&id=AoPNR)。链式法则用数学式表示如下。<br />![](https://cdn.nlark.com/yuque/__latex/9430b70c194e9b9d9be4fd80be88e7a9.svg#card=math&code=%5Cfrac%7B%5Cpartial%20z%7D%7B%5Cpartial%20x%7D%3D%5Cfrac%7B%5Cpartial%20z%7D%7B%5Cpartial%20t%7D%5Cfrac%7B%5Cpartial%20t%7D%7B%5Cpartial%20x%7D&id=aOfjn)<br />因此，局部导数![](https://cdn.nlark.com/yuque/__latex/2f3ad9cfed6335b25cd3f803aba6977a.svg#card=math&code=%5Cfrac%7B%5Cpartial%20z%7D%7B%5Cpartial%20x%7D%3D%5Cfrac%7B%5Cpartial%20z%7D%7B%5Cpartial%20t%7D%5Cfrac%7B%5Cpartial%20t%7D%7B%5Cpartial%20x%7D%3D2t%C2%B71%3D2%28x%2By%29&id=oZbiU)
+
+### 5.2.3 链式法则和计算图
+用“**2”节点表示平方运算，上面链式法则的计算用计算图表示如下。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1682237598895-926bbf13-ee9b-468c-8208-ff52c5f2c4ad.png#averageHue=%23414141&clientId=ue9c1380f-c053-4&from=paste&height=305&id=u16bf74e4&name=image.png&originHeight=381&originWidth=865&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=32081&status=done&style=none&taskId=u1e466180-071e-4737-994a-9e99664f6f4&title=&width=692)<br />如图所示，计算图的反向传播从右到左传播信号。反向传播的计算顺序是先将节点的输入信号乘以节点的局部导数，然后再传递给下一个节点。比如，反向传播时，“**2”节点的输入是![](https://cdn.nlark.com/yuque/__latex/867edb8efe0a9857e57f8c8bde159c02.svg#card=math&code=%5Cfrac%7B%5Cpartial%20z%7D%7B%5Cpartial%20z%7D&id=vSCLK)，将其乘以局部导数![](https://cdn.nlark.com/yuque/__latex/0cbfc06e476908382ec2b78ef775dbb8.svg#card=math&code=%5Cfrac%7B%5Cpartial%20z%7D%7B%5Cpartial%20t%7D&id=dECF1)，然后传递给下一个节点。<br />把![](https://cdn.nlark.com/yuque/__latex/e7a382bdb9fbb2165730bffc56c67c3e.svg#card=math&code=z%3Dt%5E2%2Ct%3Dx%2By&id=TJ1q2)的结果带入上图，如下图所示。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1682238130593-1c16d6c0-0960-4bca-a699-dbff308b6058.png#averageHue=%23414141&clientId=ue9c1380f-c053-4&from=paste&height=302&id=ub5567d67&name=image.png&originHeight=378&originWidth=861&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=26666&status=done&style=none&taskId=uaeddbdf6-6580-47a1-a842-67437229c0e&title=&width=688.8)
+
+## 5.3 反向传播
 
 
 
