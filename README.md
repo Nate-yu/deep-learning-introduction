@@ -73,6 +73,12 @@
         - [5.2.2 什么是链式法则](#522-什么是链式法则)
         - [5.2.3 链式法则和计算图](#523-链式法则和计算图)
     - [5.3 反向传播](#53-反向传播)
+        - [5.3.1 加法节点的反向传播](#531-加法节点的反向传播)
+        - [5.3.2 乘法节点的反向传播](#532-乘法节点的反向传播)
+        - [5.3.3 苹果的例子](#533-苹果的例子)
+    - [5.4 简单层的实现](#54-简单层的实现)
+        - [5.4.1 乘法层的实现](#541-乘法层的实现)
+        - [5.4.2 加法层的实现](#542-加法层的实现)
 
 <!-- /TOC -->
 # 1 Python知识预备
@@ -1488,10 +1494,133 @@ plt.show()
 用“**2”节点表示平方运算，上面链式法则的计算用计算图表示如下。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1682237598895-926bbf13-ee9b-468c-8208-ff52c5f2c4ad.png#averageHue=%23414141&clientId=ue9c1380f-c053-4&from=paste&height=305&id=u16bf74e4&name=image.png&originHeight=381&originWidth=865&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=32081&status=done&style=none&taskId=u1e466180-071e-4737-994a-9e99664f6f4&title=&width=692)<br />如图所示，计算图的反向传播从右到左传播信号。反向传播的计算顺序是先将节点的输入信号乘以节点的局部导数，然后再传递给下一个节点。比如，反向传播时，“**2”节点的输入是![](https://cdn.nlark.com/yuque/__latex/867edb8efe0a9857e57f8c8bde159c02.svg#card=math&code=%5Cfrac%7B%5Cpartial%20z%7D%7B%5Cpartial%20z%7D&id=vSCLK)，将其乘以局部导数![](https://cdn.nlark.com/yuque/__latex/0cbfc06e476908382ec2b78ef775dbb8.svg#card=math&code=%5Cfrac%7B%5Cpartial%20z%7D%7B%5Cpartial%20t%7D&id=dECF1)，然后传递给下一个节点。<br />把![](https://cdn.nlark.com/yuque/__latex/e7a382bdb9fbb2165730bffc56c67c3e.svg#card=math&code=z%3Dt%5E2%2Ct%3Dx%2By&id=TJ1q2)的结果带入上图，如下图所示。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1682238130593-1c16d6c0-0960-4bca-a699-dbff308b6058.png#averageHue=%23414141&clientId=ue9c1380f-c053-4&from=paste&height=302&id=ub5567d67&name=image.png&originHeight=378&originWidth=861&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=26666&status=done&style=none&taskId=uaeddbdf6-6580-47a1-a842-67437229c0e&title=&width=688.8)
 
 ## 5.3 反向传播
+### 5.3.1 加法节点的反向传播
+以![](https://cdn.nlark.com/yuque/__latex/2b6fedd11fb5c16ef005b49edf1796c4.svg#card=math&code=z%3Dx%2By&id=nzLG2)为对象，观察其反向传播。且导数为：![](https://cdn.nlark.com/yuque/__latex/dcb5bf359ebb515a566e9ea13e29a384.svg#card=math&code=%5Cfrac%7B%5Cpartial%20z%7D%7B%5Cpartial%20x%7D%3D%201%2C%5Cfrac%7B%5Cpartial%20z%7D%7B%5Cpartial%20y%7D%3D%201&id=OeX4k)。因此，用计算图表示如下。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1682298781855-1720ebaf-dccf-4da1-ac05-df0a7c719e0a.png#averageHue=%23414141&clientId=uc472159d-9ad5-4&from=paste&height=297&id=ufc7c8b33&name=image.png&originHeight=371&originWidth=863&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=27623&status=done&style=none&taskId=ucc5a61fc-5869-4b96-b4e1-36dd6a13590&title=&width=690.4)<br />上图中，反向传播从上游传过来的导数乘以1，然后传向下游。也就是说，因为加法节点的反向传播只乘以1，所以输入的值回原封不动地流向下一个节点。
+
+下面是一个加法的反向传播的具体例子。假设有“10+5=15”这一计算，反向传播时，从上游传来值1.3，则计算图表示如下。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1682298995603-c3b790cf-d0f6-4968-b15c-3af02bf87f74.png#averageHue=%23414141&clientId=uc472159d-9ad5-4&from=paste&height=296&id=uf4ca1eeb&name=image.png&originHeight=370&originWidth=864&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=24355&status=done&style=none&taskId=u1691fcec-648c-4457-a4da-39df5397429&title=&width=691.2)<br />因为加法节点的反向传播只是将输入信号输出到下一个节点，所以上图反向传播将 1.3 向下一个节点传递。
+
+### 5.3.2 乘法节点的反向传播
+以![](https://cdn.nlark.com/yuque/__latex/6db7773c03e177fa2ea87edb558d64a2.svg#card=math&code=z%3Dxy&id=ycALH)为对象，观察其反向传播。且导数为：![](https://cdn.nlark.com/yuque/__latex/ac7637282c1a6559b16b7002002ef6b4.svg#card=math&code=%5Cfrac%7B%5Cpartial%20z%7D%7B%5Cpartial%20x%7D%3D%20y%2C%5Cfrac%7B%5Cpartial%20z%7D%7B%5Cpartial%20y%7D%3D%20x&id=LfbyP)。因此，用计算图表示如下。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1682299244081-3c1217e7-51da-42b6-acbf-81f8c2332fab.png#averageHue=%23414141&clientId=uc472159d-9ad5-4&from=paste&height=296&id=u6bfeb42b&name=image.png&originHeight=370&originWidth=861&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=28943&status=done&style=none&taskId=u4d366c6c-de11-4a32-9054-5c56b4747bc&title=&width=688.8)<br />乘法的反向传播会将上游的值乘以正向传播时输入信号的“翻转值”后传递给下游。
+
+下面是一个乘法的反向传播的具体例子。假设有“10×5=15”这一计算，反向传播时，从上游传来值1.3，则计算图表示如下。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1682299380995-c296305b-1bf4-4c00-80e3-bb6b28b6536c.png#averageHue=%23414141&clientId=uc472159d-9ad5-4&from=paste&height=298&id=u662fa36f&name=image.png&originHeight=372&originWidth=865&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=26739&status=done&style=none&taskId=u53095dbb-a1e6-4410-9d23-1bdbd65c9e9&title=&width=692)<br />因为乘法的反向传播会乘以输入信号的翻转值，所以各自可按1.3 × 5 = 6.5、1.3 × 10 = 13计算。另外，加法的反向传播只是将上游的值传给下游，并不需要正向传播的输入信号。但是，乘法的反向传播需要正向传播时的输入信号值。因此，实现乘法节点的反向传播时，要保存正向传播的输入信号。
+
+### 5.3.3 苹果的例子
+
+1. 支付金额关于苹果价格的导数
+2. 支付金额关于苹果个数的导数
+3. 支付金额关于消费税的导数
+
+计算图的反向传播如下。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1682299726103-0feb8e5c-667b-4259-b635-511a574564e8.png#averageHue=%23424242&clientId=uc472159d-9ad5-4&from=paste&height=250&id=u120e1948&name=image.png&originHeight=313&originWidth=866&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=40451&status=done&style=none&taskId=ude1aa208-96c2-4cca-a75a-114fa1f465f&title=&width=692.8)
+
+正如前面所说，乘法节点的反向传播会将输入信号翻转后传给下游。从上图结果可知，苹果的价格的导数是2.2，苹果个数的导数是110，消费税的导数是200。这可以可以解释为，如果消费税和苹果的价格增加相同的值，则消费税将对最终价格产生200倍大小的影响，苹果的价格将产生2.2倍大小的影响。
+
+## 5.4 简单层的实现
+### 5.4.1 乘法层的实现
+> 层的实现中有两个共通的方法（接口）forward()和backward()。forward()对应正向传播，backward()对应反向传播。
+
+实现乘法层如下。
+```python
+class MulLayer:
+    def __init__(self):
+        self.x = None
+        self.y = None
 
 
+    def forward(self,x,y):
+        self.x = x
+        self.y = y
+        out = x * y
+        return out
+    
+    def backward(self, dout):
+        dx = dout * self.y
+        dy = dout * self.x
+        return dx,dy
+```
+`__init__()`中会初始化实例变量x和y，它们用于保存正向传播时的输入值。`forward()`接收x和y两个参数，将它们相乘后输出。`backward()`将从上游传来的导数（dout）乘以正向传播的翻转值，然后传给下游。
 
+下面使用`MulLayer`实现前面购买苹果的例子。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1682301489234-c52e11cf-45fa-4469-a8d4-9854fc7b3590.png#averageHue=%23424242&clientId=uc472159d-9ad5-4&from=paste&height=268&id=u70026d66&name=image.png&originHeight=335&originWidth=865&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=45766&status=done&style=none&taskId=udd2494ad-9aa4-4a17-be68-438291942e6&title=&width=692)<br />使用此乘法层，实现上图的正向传播。
+```python
+from layer_naive import *
 
+apple = 100
+apple_num = 2
+tax = 1.1
+
+mul_apple_layer = MulLayer()
+mul_tax_layer = MulLayer()
+
+# forward
+apple_price = mul_apple_layer.forward(apple,apple_num)
+price = mul_tax_layer.forward(apple_price, tax)
+
+print(price) # 220
+```
+
+此外，关于各个变量的导数，可由`backward()`求出。
+```python
+# backward
+dprice = 1
+dapple_price, dtax = mul_tax_layer.backward(dprice)
+dapple, dapple_num = mul_apple_layer.backward(dapple_price)
+
+print(dapple, dapple_num, dtax) # 2.2 110 200
+```
+这里调用`backward()`的顺序与调用`forward()`的顺序相反。此外，要注意`backward()`的参数中需要输入“关于正向传播时的输出变量的导数”。比如，mul_apple_layer乘法层在正向传播时会输出apple_price，在反向传播时，则会将apple_price的导数dapple_price设为参数。
+
+### 5.4.2 加法层的实现
+实现加法节点的加法层。
+```python
+class AddLayer:
+    def __init__(slef):
+        pass
+
+    def forward(self,x,y):
+        out = x + y
+        return out
+    
+    def backward(self, dout):
+        dx = dout * 1
+        dy = dout * 1
+        return dx, dy
+```
+加法层不需要特意进行初始化，所以`__init__()`中什么也不运行。加法层的`forward()`接收x和y两个参数，将它们相加后输出。`backward()`将上游传来的导数（dout）原封不动地传递给下游。
+
+使用加法层和乘法层，实现下图购买两个苹果和三个橘子的例子。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1682304720493-8e58ff95-021b-4d58-976d-22b1a796661a.png#averageHue=%23424242&clientId=uc472159d-9ad5-4&from=paste&height=321&id=u0f12ed06&name=image.png&originHeight=401&originWidth=864&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=66016&status=done&style=none&taskId=ua832a0dc-c909-49a9-9097-3463fbe8bae&title=&width=691.2)
+```python
+from layer_naive import *
+
+apple = 100
+apple_num = 2
+orange = 150
+orange_num = 3
+tax = 1.1
+
+# layer
+mul_apple_layer = MulLayer()
+mul_orange_layer = MulLayer()
+add_apple_orange_layer = AddLayer()
+mul_tax_layer = MulLayer()
+
+# forward
+apple_price = mul_apple_layer.forward(apple, apple_num)
+orange_price = mul_orange_layer.forward(orange,orange_num)
+all_price = add_apple_orange_layer.forward(apple_price, orange_price)
+price = mul_tax_layer.forward(all_price, tax)
+
+# backward
+dprice = 1
+dall_price, dtax = mul_tax_layer.backward(dprice)
+dapple_price, dorange_price = add_apple_orange_layer.backward(dall_price)
+dorange, dorange_num = mul_orange_layer.backward(dorange_price)
+dapple, dapple_num = mul_apple_layer.backward(dapple_price)
+
+print(price) # 715
+print(dapple_num,dapple, dorange,dorange_num,dtax) # 110 2.2 3.3 165 650
+```
+
+1. 首先，生成必要的层，以合适的顺序调用正向传播的forward()方法。
+2. 然后，用与正向传播相反的顺序调用反向传播的backward()方法，就可以求出想要的导数。
 
 
 
