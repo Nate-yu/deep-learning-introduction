@@ -79,6 +79,9 @@
     - [5.4 简单层的实现](#54-简单层的实现)
         - [5.4.1 乘法层的实现](#541-乘法层的实现)
         - [5.4.2 加法层的实现](#542-加法层的实现)
+    - [5.5 激活函数层的实现](#55-激活函数层的实现)
+        - [5.5.1 ReLU层](#551-relu层)
+        - [5.5.2 Sigmoid层](#552-sigmoid层)
 
 <!-- /TOC -->
 # 1 Python知识预备
@@ -1622,12 +1625,72 @@ print(dapple_num,dapple, dorange,dorange_num,dtax) # 110 2.2 3.3 165 650
 1. 首先，生成必要的层，以合适的顺序调用正向传播的forward()方法。
 2. 然后，用与正向传播相反的顺序调用反向传播的backward()方法，就可以求出想要的导数。
 
+## 5.5 激活函数层的实现
+把构成神经网络的层实现为一个类。先来实现激活函数的ReLU层和Sigmoid层。
+
+### 5.5.1 ReLU层
+激活函数ReLU（Rectified Linear Unit）如下所示。<br />![](https://cdn.nlark.com/yuque/__latex/9d0f1a216c00bc2a32b1be48afb0ac37.svg#card=math&code=y%20%3D%20%5Cbegin%7Bcases%7D%20x%20%5Cquad%20%28x%20%3E%200%29%20%5C%5C%200%20%5Cquad%20%28x%20%5Cle%200%29%20%5Cend%7Bcases%7D&id=S6fvp)<br />通过上式，可以求出y关于x的导数如下所示。<br />![](https://cdn.nlark.com/yuque/__latex/0d840b23d3cdbe13fe01cfa3abd4db61.svg#card=math&code=%5Cfrac%7B%5Cpartial%20y%7D%7B%5Cpartial%20x%7D%20%3D%20%5Cbegin%7Bcases%7D%201%20%5Cquad%20%28x%20%3E%200%29%20%5C%5C%200%20%5Cquad%20%28x%20%5Cle%200%29%20%5Cend%7Bcases%7D&id=QHj9S)<br />在上式中，如果正向传播时的输入x大于0，则反向传播会将上游的值原封不动地传给下游。反过来，如果正向传播时的x小于等于0，则反向传播中传给下游的信号将停在此处。用计算图表示如下所示。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1682337722393-fa7ed26c-c10e-4b61-afe3-b82f150e50fb.png#averageHue=%23414141&clientId=ud5e17f85-f041-4&from=paste&height=186&id=ua487415d&name=image.png&originHeight=232&originWidth=864&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=21209&status=done&style=none&taskId=u4bb7abd5-ee6e-49ff-b623-0a7f88a6351&title=&width=691.2)<br />下面用Python来实现ReLU层。在神经网络的层的实现中，一般假定forward()和backward()的参数是NumPy数组。
+```python
+class Relu:
+    def __init__(self):
+        self.mask = None
+
+    def forward(self,x):
+        self.mask = (x <= 0)
+        out = x.copy()
+        out[self.mask] = 0
+        return out
+    
+    def backward(self, dout):
+        dout[self.mask] = 0
+        dx = dout
+        return dx
+```
+Relu类有实例变量mask。这个变量mask是由True/False构成的NumPy数组，它会把正向传播时的输入x的元素中小于等于0的地方保存为True，其他地方（大于0的元素）保存为False。<br />如下所示，mask变量保存了由True/False构成的NumPy数组。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1682338558080-9d0d8733-9ff9-404f-97eb-89df8c8c6179.png#averageHue=%232f333b&clientId=ud5e17f85-f041-4&from=paste&height=202&id=uf8ea3e88&name=image.png&originHeight=253&originWidth=590&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=17696&status=done&style=none&taskId=u0a4c32ee-f6ad-411b-9126-7f6fad20871&title=&width=472)<br />如果正向传播时的输入值小于等于0，则反向传播的值为0。因此，反向传播中会使用正向传播时保存的mask，将从上游传来的dout的mask中的元素为True的地方设为0。
+> ReLU层的作用就像电路中的开关一样。正向传播时，有电流通过的话，就将开关设为ON；没有电流通过的话，就将开关设为OFF。反向传播时，开关为ON的话，电流会直接通过；开关为OFF的话，则不会有电流通过。
 
 
+### 5.5.2 Sigmoid层
+接下来实现sigmoid函数，函数式如下。<br />![](https://cdn.nlark.com/yuque/__latex/1cf6880d0b81950256848e4a1e6598cb.svg#card=math&code=y%20%3D%20%5Cfrac%7B1%7D%7B1%2Be%5E%7B-x%7D%7D&id=h868C)<br />用计算图表示如下。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1682338766094-e2d0fa39-ccbb-4482-8c6f-db3a79b4863f.png#averageHue=%23414141&clientId=ud5e17f85-f041-4&from=paste&height=186&id=u5c92dc47&name=image.png&originHeight=233&originWidth=837&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=19375&status=done&style=none&taskId=u4c4cba0f-4000-43dd-985e-dffc8d7a4f4&title=&width=669.6)<br />上图中，除了“×”和“+”节点外，还出现了新的“exp”和“/”节点。“exp”节点会进行![](https://cdn.nlark.com/yuque/__latex/27ffe57a1279a99ac0a6e3f972209ac7.svg#card=math&code=y%3De%5Ex&id=gjg0E)的计算，“/”节点会进行的![](https://cdn.nlark.com/yuque/__latex/6c314e80ccfb22fe6ba873bc757298b4.svg#card=math&code=y%3D%20%5Cfrac1x&id=hdfAD)计算。
 
+如计算图所示，sigmoid函数式的计算由局部计算的传播构成。下面来进行计算图的反向传播。
 
+1. “/”节点表示![](https://cdn.nlark.com/yuque/__latex/6c314e80ccfb22fe6ba873bc757298b4.svg#card=math&code=y%3D%20%5Cfrac1x&id=ur5pw)，其导数可以解析性地表示为：![](https://cdn.nlark.com/yuque/__latex/be208dc62c18c03976c5a22d7ea58f25.svg#card=math&code=%5Cfrac%7B%5Cpartial%20y%7D%7B%5Cpartial%20x%7D%20%3D%20-%5Cfrac%7B1%7D%7Bx%5E2%7D%20%3D%20-y%5E2&id=rJ5Bq)。反向传播时，会将上游的值乘以![](https://cdn.nlark.com/yuque/__latex/141163ecd267ecd58bc39155dee3314b.svg#card=math&code=-y%5E2%0A&id=rOokX)（正向传播的输出的平方乘以−1后的值）后，再传给下游。计算图如下所示。
 
+![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1682339461211-0fa7e039-c3b8-492b-a310-b9b08b5d32c7.png#averageHue=%23424242&clientId=ud5e17f85-f041-4&from=paste&height=151&id=u9477a15e&name=image.png&originHeight=189&originWidth=805&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=23286&status=done&style=none&taskId=u95dfa3ce-fc3a-4a34-8ddf-42b754edb42&title=&width=644)
 
+2. “+”节点将上游的值原封不动地传给下游，计算图如下所示。
+
+![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1682339504598-377fe734-6d43-48ab-bcba-690c95ca0ff0.png#averageHue=%23424242&clientId=ud5e17f85-f041-4&from=paste&height=158&id=ucbbe688f&name=image.png&originHeight=198&originWidth=804&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=26215&status=done&style=none&taskId=u6675f10b-0d43-4b48-9d23-a771a2b45d1&title=&width=643)
+
+3. “exp”节点表示![](https://cdn.nlark.com/yuque/__latex/27ffe57a1279a99ac0a6e3f972209ac7.svg#card=math&code=y%3De%5Ex&id=Bh11m)，其导数为![](https://cdn.nlark.com/yuque/__latex/20615c046540f52e46778e46245037f9.svg#card=math&code=%5Cfrac%7B%5Cpartial%20y%7D%7B%5Cpartial%20x%7D%20%3D%20e%5Ex%0A&id=NiA2Y)，计算图中，上游的值乘以正向传播时的输出（这个例子中是exp(−x)）后，再传给下游。
+
+![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1682339731256-01a7dc74-7c28-4f31-b63e-7219dddc7ae0.png#averageHue=%23424242&clientId=ud5e17f85-f041-4&from=paste&height=146&id=u94f41dfc&name=image.png&originHeight=183&originWidth=815&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=27924&status=done&style=none&taskId=u4f6d2ff2-dc9e-4ffe-82a5-9b893a003c5&title=&width=652)
+
+4. “×”节点将正向传播时的值翻转后做乘法运算。因此，这里要乘以−1。
+
+![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1682339766106-b4856185-bb1a-49f0-925b-67fd1479f807.png#averageHue=%23414141&clientId=ud5e17f85-f041-4&from=paste&height=158&id=ua4b72cff&name=image.png&originHeight=198&originWidth=839&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=31337&status=done&style=none&taskId=ufcfbdfb6-4fe0-472d-9772-5531be83ce5&title=&width=671.2)
+
+由上图结果及上述内容可知，Sigmoid层的反向传播的输出为![](https://cdn.nlark.com/yuque/__latex/96dc19e52fb6a51ecbd8135607f6cb45.svg#card=math&code=%5Cfrac%7B%5Cpartial%20L%7D%7B%5Cpartial%20y%7Dy%5E2e%5E%7B-x%7D&id=hX142)，这个值会传播给下游的节点。这里需要注意的是，![](https://cdn.nlark.com/yuque/__latex/96dc19e52fb6a51ecbd8135607f6cb45.svg#card=math&code=%5Cfrac%7B%5Cpartial%20L%7D%7B%5Cpartial%20y%7Dy%5E2e%5E%7B-x%7D&id=BUfU1)这个值只根据正向传播时的输入x和输出y就可以算出来。故上面的计算图可以画成如下图所示的集约化“sigmoid”节点。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1682339960237-caf33d95-bdda-47fb-bc59-a1b266c306f7.png#averageHue=%23414141&clientId=ud5e17f85-f041-4&from=paste&height=138&id=u1f1adf52&name=image.png&originHeight=173&originWidth=838&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=14014&status=done&style=none&taskId=u16316542-11b4-4a68-954f-cff25196a9f&title=&width=670.4)
+
+另外，![](https://cdn.nlark.com/yuque/__latex/96dc19e52fb6a51ecbd8135607f6cb45.svg#card=math&code=%5Cfrac%7B%5Cpartial%20L%7D%7B%5Cpartial%20y%7Dy%5E2e%5E%7B-x%7D&id=tHy2p)可以进一步整理如下。<br />![](https://cdn.nlark.com/yuque/__latex/b050f44b85dfc82326f7ad700b949048.svg#card=math&code=%5Cbegin%7Bequation%2A%7D%20%25%E5%8A%A0%2A%E8%A1%A8%E7%A4%BA%E4%B8%8D%E5%AF%B9%E5%85%AC%E5%BC%8F%E7%BC%96%E5%8F%B7%0A%09%5Cbegin%7Bsplit%7D%0A%09%09%5Cfrac%7B%5Cpartial%20L%7D%7B%5Cpartial%20y%7Dy%5E2e%5E%7B-x%7D%0A%09%09%26%20%3D%20%20%5Cfrac%7B%5Cpartial%20L%7D%7B%5Cpartial%20y%7D%20%5Cfrac%7B1%7D%7B%281%2Be%5E%7B-x%7D%29%5E2%7De%5E%7B-x%7D%5C%5C%0A%09%09%26%20%3D%20%20%5Cfrac%7B%5Cpartial%20L%7D%7B%5Cpartial%20y%7D%20%5Cfrac%7B1%7D%7B1%2Be%5E%7B-x%7D%7D%5Cfrac%7Be%5E%7B-x%7D%7D%7B1%2Be%5E%7B-x%7D%7D%5C%5C%0A%09%09%26%20%3D%20%5Cfrac%7B%5Cpartial%20L%7D%7B%5Cpartial%20y%7Dy%281-y%29%0A%09%5Cend%7Bsplit%7D%0A%5Cend%7Bequation%2A%7D%20&id=vWWue)<br />故下图为Sigmoid层的反向传播，只根据正向传播的输出就能计算出来。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1682340392354-fc9b76d0-ea94-4cf5-ae0a-4a0cd18727f6.png#averageHue=%23414141&clientId=ud5e17f85-f041-4&from=paste&height=138&id=u33c631ab&name=image.png&originHeight=173&originWidth=837&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=12963&status=done&style=none&taskId=u890094ff-7fd6-41e5-9c85-6679b073dd5&title=&width=669.6)
+
+现在用Python实现Sigmoid层。
+```python
+class Sigmoid:
+    def __init__(self):
+        self.out = None
+    
+    def forward(self,x):
+        out = sigmoid(x)
+        self.out = out
+        return out
+    
+    def backward(self,dout):
+        dx = dout * (1.0 - self.out) * self.out
+        return dx
+```
+	这个实现中，正向传播时将输出保存在了实例变量out中，然后，反向传播时，使用该变量out进行计算。
 
 
 
