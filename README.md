@@ -82,6 +82,10 @@
     - [5.5 激活函数层的实现](#55-激活函数层的实现)
         - [5.5.1 ReLU层](#551-relu层)
         - [5.5.2 Sigmoid层](#552-sigmoid层)
+    - [5.6 Affine/Softmax层的实现](#56-affinesoftmax层的实现)
+        - [5.6.1 Affine层](#561-affine层)
+        - [5.6.2 批版本的Affine层](#562-批版本的affine层)
+        - [5.6.3 Softmax-with-Loss 层](#563-softmax-with-loss-层)
 
 <!-- /TOC -->
 # 1 Python知识预备
@@ -1691,6 +1695,91 @@ class Sigmoid:
         return dx
 ```
 	这个实现中，正向传播时将输出保存在了实例变量out中，然后，反向传播时，使用该变量out进行计算。
+
+## 5.6 Affine/Softmax层的实现
+### 5.6.1 Affine层
+> 神经网络的正向传播中进行的矩阵的乘积运算在几何学领域被称为“仿射变换”。因此，这里将进行仿射变换的处理实现为“Affine层”。
+
+现在将这里进行的求矩阵的乘积与偏置的和的运算用计算图表示出来。将乘积运算用“dot”节点表示的话，则`np.dot(X, W) + B`的运算可用下图所示的计算图表示出来。另外，在各个变量的上方标记了它们的形状（比如，计算图上显示了X的形状为(2,)，X·W的形状为(3,)等）。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1682388119453-1f5c061c-f326-48bb-b8c6-8b00e057af67.png#averageHue=%23414141&clientId=ueefafb51-da6a-4&from=paste&height=302&id=u2159ed74&name=image.png&originHeight=378&originWidth=865&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=26007&status=done&style=none&taskId=u03024b04-48c5-48e0-9efa-c77a3ef5a6a&title=&width=692)<br />上图是比较简单的计算图，不过要注意X、W、B是矩阵（多维数组）。之前我们见到的计算图中各个节点间流动的是标量，而这个例子中各个节点间传播的是矩阵。
+
+下面来考虑上面这个计算图的反向传播。以矩阵为对象的反向传播，按矩阵的各个元素进行计算时，步骤和以标量为对象的计算图相同。实际写一下的话，可以得到下式。<br />![](https://cdn.nlark.com/yuque/__latex/d10b21fb572bdff2a07c348c102f2ea6.svg#card=math&code=%5Cfrac%7B%5Cpartial%20L%7D%7B%5Cpartial%20X%7D%20%3D%20%5Cfrac%7B%5Cpartial%20L%7D%7B%5Cpartial%20Y%7D%C2%B7W%5ET%20%5C%5C%0A%20%5C%20%5C%5C%0A%5Cfrac%7B%5Cpartial%20L%7D%7B%5Cpartial%20W%7D%20%3D%20X%5ET%C2%B7%5Cfrac%7B%5Cpartial%20L%7D%7B%5Cpartial%20Y%7D&id=AUJNy)<br />根据上式写出计算图的反向传播。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1682388616114-0167e161-f262-4efc-a54d-4284600715bc.png#averageHue=%23414141&clientId=ueefafb51-da6a-4&from=paste&height=386&id=u98233bc4&name=image.png&originHeight=482&originWidth=862&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=62187&status=done&style=none&taskId=u11758d87-231e-4163-86c8-771291a6c16&title=&width=689.6)<br />注意计算图中各个变量的形状。![](https://cdn.nlark.com/yuque/__latex/94e79ad0c1aabeafef9e2fc4af6adf66.svg#card=math&code=X&id=c6UHm)和![](https://cdn.nlark.com/yuque/__latex/9f0e97e32d9617b725589f3aada0fa54.svg#card=math&code=%5Cfrac%7B%5Cpartial%20L%7D%7B%5Cpartial%20X%7D&id=BqMaD)形状相同，![](https://cdn.nlark.com/yuque/__latex/a36915ecf0b5605493f5aeaf1480a9ac.svg#card=math&code=W&id=K76rh)和![](https://cdn.nlark.com/yuque/__latex/36e5597d13be0b891d1dbb4a7b2f5f0d.svg#card=math&code=%5Cfrac%7B%5Cpartial%20L%7D%7B%5Cpartial%20W%7D&id=GAXNO)形状相同。
+
+### 5.6.2 批版本的Affine层
+前面介绍的Affine层的输入X是以单个数据为对象的。现在我们考虑N个数据一起进行正向传播的情况，也就是批版本的Affine层。下面是批版本的Affine层的计算图。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1682389275505-be09b6cf-65da-4a77-9c26-5b468bbfd67c.png#averageHue=%23424242&clientId=ueefafb51-da6a-4&from=paste&height=414&id=uc98b5281&name=image.png&originHeight=517&originWidth=865&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=76503&status=done&style=none&taskId=uf9060104-e48d-4b8b-9145-1f9f877b49f&title=&width=692)<br />与刚刚不同的是，现在输入X的形状是(N, 2)。之后就和前面一样，在计算图上进行单纯的矩阵计算。反向传播时，如果注意矩阵的形状，就可以和前面一样推导出![](https://cdn.nlark.com/yuque/__latex/9f0e97e32d9617b725589f3aada0fa54.svg#card=math&code=%5Cfrac%7B%5Cpartial%20L%7D%7B%5Cpartial%20X%7D&id=mZU8I)和![](https://cdn.nlark.com/yuque/__latex/36e5597d13be0b891d1dbb4a7b2f5f0d.svg#card=math&code=%5Cfrac%7B%5Cpartial%20L%7D%7B%5Cpartial%20W%7D&id=CNTy0)。
+
+正向传播时，偏置会被加到每一个数据（第1个、第2个……）上。因此，反向传播时，各个数据的反向传播的值需要汇总为偏置的元素。代码表示如下。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1682389506230-c7bc3999-4eb8-4184-8a9e-61348c006450.png#averageHue=%2330343c&clientId=ueefafb51-da6a-4&from=paste&height=178&id=u20c2ae7e&name=image.png&originHeight=222&originWidth=526&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=16556&status=done&style=none&taskId=u282cb4ed-7472-4ad3-ae85-1e325325b6a&title=&width=420.8)<br />这个例子中，假定数据有2个（N = 2）。偏置的反向传播会对这2个数据的导数按元素进行求和。因此，这里使用了np.sum()对第0轴（以数据为单位的轴，axis=0）方向上的元素进行求和。
+
+综上所述，Affine的实现如下所示。
+```python
+class Affine:
+    def __init__(self, W, b):
+        self.W = W
+        self.b = b
+        self.x = None
+        self.original_x_shape = None
+
+        # 权重和偏执参数的导数
+        self.dW = None
+        self.db = None
+
+    def forward(self, x):
+        # 对应张量
+        self.original_x_shape = x.shape
+        x = x.reshape(x.shape[0],-1)
+        self.x = x
+
+        out = np.dot(self.x, self.W) + self.b
+        return out
+    
+    def backward(self, dout):
+        dx = np.dot(dout, self.W.T)
+        self.dW = np.dot(self.x.T, dout)
+        self.db = np.sum(dout, axis=0)
+
+        dx = dx.reshape(*self.original_x_shape) # 还原输入数据的形状（对应张量）
+        return dx
+```
+
+### 5.6.3 Softmax-with-Loss 层
+下面来实现Softmax层。考虑到这里也包含作为损失函数的交叉熵误差（cross entropy error），所以称为“Softmax-with-Loss层”。Softmax-with-Loss层（Softmax函数和交叉熵误差）的计算图简化版如下图所示。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1682390663211-c9b02d65-332c-4a9e-8056-75bbb5c6dc16.png#averageHue=%23424242&clientId=ueefafb51-da6a-4&from=paste&height=446&id=u2a9907d2&name=image.png&originHeight=558&originWidth=865&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=27640&status=done&style=none&taskId=ud0b17473-ccf5-4c9b-8d6b-68278407df4&title=&width=692)<br />上图中，softmax 函数记为 Softmax 层，交叉熵误差记为Cross Entropy Error层。这里假设要进行3类分类，从前面的层接收3个输入（得分）。Softmax 层将输入（a1, a2, a3）正规化，输出（y1, y2, y3）。Cross Entropy Error层接收Softmax的输出（y1, y2, y3）和教师标签（t1, t2, t3），从这些数据中输出损失L。
+
+注意反向传播的结果，（y1− t1, y2− t2, y3− t3）是Softmax层的输出和教师标签的差分。神经网络的反向传播会把这个差分表示的误差传递给前面的层，这是神经网络学习中的重要性质。
+> 神经网络学习的目的就是通过调整权重参数，使神经网络的输出（Softmax的输出）接近教师标签。
+
+这里考虑一个具体的例子，比如思考教师标签是（0, 1, 0），Softmax层的输出是(0.3, 0.2, 0.5)的情形。因为正确解标签处的概率是0.2（20%），这个时候的神经网络未能进行正确的识别。此时，Softmax层的反向传播传递的是(0.3, −0.8, 0.5)这样一个大的误差。<br />下面来进行Softmax-with-Loss层的实现。
+```python
+class SoftmaxWithLoss:
+    def __init__(self):
+        self.loss = None
+        self.y = None
+        self.t = None
+
+
+    def forward(self, x, t):
+        self.t = t
+        self.y = softmax(x)
+        self.loss = cross_entropy_error(self.y, self.t)
+
+        return self.loss
+    
+    def backward(self, dout = 1):
+        batch_size = self.t.shape[0]
+        if self.t.size == self.y.size: # 监督数据是one-hot-vector的情况
+            dx = (self.y - self.t) / batch_size
+        else:
+            dx = self.y.copy()
+            dx[np.arange(batch_size),self.t] -= 1
+            dx = dx / batch_size
+
+
+        return dx
+```
+请注意反向传播时，将要传播的值除以批的大小（batch_size）后，传递给前面的层的是单个数据的误差。
+
+
+
+
+
 
 
 
