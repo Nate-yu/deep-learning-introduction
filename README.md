@@ -91,6 +91,11 @@
         - [5.7.2 对应误差反向传播的神经网络的实现](#572-对应误差反向传播的神经网络的实现)
         - [5.7.3 误差反向传播法的梯度确认](#573-误差反向传播法的梯度确认)
         - [5.7.4 使用误差反向传播法的学习](#574-使用误差反向传播法的学习)
+- [6 与学习相关的技巧](#6-与学习相关的技巧)
+    - [6.1 参数的更新](#61-参数的更新)
+        - [6.1.1 SGD](#611-sgd)
+        - [6.1.2 Momentum](#612-momentum)
+        - [6.1.3 AdaGrad](#613-adagrad)
 
 <!-- /TOC -->
 # 1 Python知识预备
@@ -1994,20 +1999,87 @@ for i in range(iters_num):
 ```
 输出如下：<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1682432540364-f16857ef-de82-4ec0-bd57-9a46384cdfa2.png#averageHue=%23262e34&clientId=ub03a5fe0-7642-4&from=paste&height=290&id=u20964b01&name=image.png&originHeight=362&originWidth=622&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=37989&status=done&style=none&taskId=u492bb29a-7a45-4525-b4db-35e8e8b4ace&title=&width=497.6)
 
+# 6 与学习相关的技巧
+## 6.1 参数的更新
+
+1. **最优化**（optimization）：神经网络的学习的目的是找到使损失函数的值尽可能小的参数。这是寻找最优参数的问题，解决这个问题的过程称为
+2. **随机梯度下降法**（stochastic gradient descent）：使用参数的梯度，沿梯度方向更新参数，并重复这个步骤多次，从而逐渐靠近最优参数，简称SGD。
+
+### 6.1.1 SGD
+用数学式可以将SGD写成如下式子。
+
+上面把需要更新的权重参数记为W，把损失函数关于W的梯度记为。表示学习率，实际上会取 0.01 或 0.001 这些事先决定好的值。式子中的表示用右边的值更新左边的值。SGD是朝着梯度方向只前进一定距离的简单方法。<br />下面将SGD实现为一个Python类。
+```python
+class SGD:
+    def __init__(self, lr = 0.01):
+        self.lr = lr
 
 
+    def update(self, params, grads):
+        for key in params.key():
+            params[key] -= self.lr * grads[key]
+```
+这里，进行初始化时的参数lr表示learning rate（学习率）。这个学习率会保存为实例变量。此外，代码段中还定义了`update(params, grads)`方法，这个方法在SGD中会被反复调用。参数params和grads（与之前的神经网络的实现一样）是字典型变量，按params['W1']、grads['W1']的形式，分别保存了权重参数和它们的梯度。
+
+考虑这个函数的最小值问题：<br />如下图所示，上式表示的函数是向 x 轴方向延伸的“碗”状函数。实际上，其的等高线呈向x轴方向延伸的椭圆状。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1682473469104-b0eec39e-3b51-4997-9b73-a50d0efd6362.png#averageHue=%234a4a4a&clientId=u7e2c328a-3440-4&from=paste&height=308&id=u6acbab83&name=image.png&originHeight=385&originWidth=878&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=210900&status=done&style=none&taskId=u31d37ffc-849d-4cb8-8a0e-80eb5205dd5&title=&width=702.4)
+
+下面是函数的梯度。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1682473564028-85a9e5f2-7f48-4eef-9305-73817d18ab7a.png#averageHue=%23414141&clientId=u7e2c328a-3440-4&from=paste&height=457&id=u29474502&name=image.png&originHeight=571&originWidth=858&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=60674&status=done&style=none&taskId=ud5bafb0a-884c-498e-8f3e-c68b47dfef4&title=&width=686.4)<br />这个梯度的特征是，y轴方向上大，x轴方向上小。换句话说，就是y轴方向的坡度大，而x轴方向的坡度小。
+
+SGD的缺点是，如果函数的形状非均向（anisotropic），比如呈延伸状，搜索的路径就会非常低效。SGD低效的根本原因是，梯度的方向并没有指向最小值的方向。
+
+### 6.1.2 Momentum
+用数学式表示Momentum方法，如下所示。
+
+和前面的SGD一样，W表示要更新的权重参数，表示损失函数关于W的梯度，表示学习率。这里出现了一个变量，对应物理上的速度。<br />上面第一个式子表示类物体在梯度方向上的受力，在这个力的作用下，物体的速度增加这一物理法则。如下图所示，Momentum方法给人的感觉就像是小球在地面上滚动。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1682475517203-0ca2a041-1024-4c4c-9845-452688d3b9cb.png#averageHue=%23424242&clientId=u7e2c328a-3440-4&from=paste&height=109&id=u46ad7634&name=image.png&originHeight=136&originWidth=862&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=16077&status=done&style=none&taskId=u71f73332-0e0b-4321-8c23-a142cb17701&title=&width=689.6)<br />第一个式子中有这一项。在在物体不受任何力时，该项承担使物体逐渐减速的任务（α设定为0.9之类的值），对应物理上的地面摩擦或空气阻力。下面是Momentum的代码实现。
+```python
+class Momentum:
+    """Momentum SGD"""
+    def __init__(self, lr = 0.01, momentum = 0.9):
+        self.lr = lr
+        self.momentum = momentum
+        self.v = None
+    
+    def update(self, params, grads):
+        if self.v is None:
+            self.v = {}
+            for key, val in params.items():
+                self.v[key] = np.zeros_like(val)
+        
+        for key in params.keys():
+            self.v[key] = self.momentum * self.v[key] - self.lr * grads[key]
+            params[key] += self.v[key]
+```
+实例变量v会保存物体的速度。初始化时，v中什么都不保存，但当第一次调用`update()`时，v会以字典型变量的形式保存与参数结构相同的数据。剩余部分的代码就是将上面两个数学式写出来。
+
+现在尝试用Momentum解决的最优化问题。如下图所示。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1682476525886-612623d6-a933-45b6-96bf-ed9c3cbfbdea.png#averageHue=%23414141&clientId=u7e2c328a-3440-4&from=paste&height=463&id=uc7793ada&name=image.png&originHeight=579&originWidth=862&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=60134&status=done&style=none&taskId=u527e3da3-9e7d-488a-a06b-d672f285a96&title=&width=689.6)<br />上图中，更新路径就像小球在碗中滚动一样。和SGD相比，我们发现“之”字形的“程度”减轻了。这是因为虽然x轴方向上受到的力非常小，但是一直在同一方向上受力，所以朝同一个方向会有一定的加速。反过来，虽然y轴方向上受到的力很大，但是因为交互地受到正方向和反方向的力，它们会互相抵消，所以y轴方向上的速度不稳定。因此，和SGD时的情形相比，可以更快地朝x轴方向靠近，减弱“之”字形的变动程度。
+
+### 6.1.3 AdaGrad
+在神经网络的学习中，学习率（数学式中记为η）的值很重要。学习率过小，会导致学习花费过多时间；反过来，学习率过大，则会导致学习发散而不能正确进行。<br />在关于学习率的有效技巧中，有一种被称为**学习率衰减**（learning rate decay）的方法，即随着学习的进行，使学习率逐渐减小。实际上，一开始“多”学，然后逐渐“少”学的方法，在神经网络的学习中经常被使用。<br />逐渐减小学习率的想法，相当于将“全体”参数的学习率值一起降低。而AdaGrad进一步发展了这个想法，针对“一个一个”的参数，赋予其“定制”的值。<br />AdaGrad会为参数的每个元素适当地调整学习率，与此同时进行学习。下面，用数学式表示AdaGrad的更新方法。
+
+这里和前面的SGD一样，新出现的变量h，保存了以前所有梯度值的平方和（第一个式子中的表示对应矩阵元素的乘法）。然后在更新参数时，通过乘以，就可以调整学习的尺度。<br />这意味着，参数的元素中变动较大（被大幅更新）的元素的学习率将变小。也就是说，可以按参数的元素进行学习率衰减，使变动大的参数的学习率逐渐减小。
+
+下面用Python来实现AdaGrad。
+```python
+class AdaGrad:
+    def __init__(self, lr = 0.01):
+        self.lr = lr
+        self.h = None
 
 
+    def update(self, params, grads):
+        if self.h is None:
+            self.h = {}
+            for key, val in  params.items():
+                self.h[key] = np.zeros_like(val)
 
 
+        for key in params.keys():
+            self.h[key] += grads[key] * grads[key]
+            params[key] -= self.lr * grads[key] / (np.sqrt(self.h[key]) + 1e-7)
+```
+这里需要注意的是，最后一行加上了微小值1e-7。这是为了防止当`self.h[key]`中有0时，将0用作除数的情况。
 
-
-
-
-
-
-
-
+试着使用AdaGrad解决的最优化问题。如下图所示。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1682478475723-14b9bba4-0e0c-4882-9d37-d77db20e8f4e.png#averageHue=%23414141&clientId=u7e2c328a-3440-4&from=paste&height=486&id=u89f7d043&name=image.png&originHeight=607&originWidth=860&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=60314&status=done&style=none&taskId=u0cb6f1b8-135f-4f52-975d-c39aa464243&title=&width=688)<br />由上图的结果可知，函数的取值高效地向着最小值移动。由于y轴方向上的梯度较大，因此刚开始变动较大，但是后面会根据这个较大的变动按比例进行调整，减小更新的步伐。因此，y轴方向上的更新程度被减弱，“之”字形的变动程度有所衰减。
 
 
 
