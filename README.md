@@ -102,6 +102,10 @@
     - [6.2 权重的初始值](#62-权重的初始值)
         - [6.2.1 可以将权重初始值设为0吗](#621-可以将权重初始值设为0吗)
         - [6.2.2 隐藏层的激活值的分布](#622-隐藏层的激活值的分布)
+        - [6.2.3 ReLU的权重初始值](#623-relu的权重初始值)
+        - [6.2.4 基于MNIST数据集的权重初始值的比较](#624-基于mnist数据集的权重初始值的比较)
+    - [6.3 Batch Normalization](#63-batch-normalization)
+        - [6.3.1 Batch Normalization 的算法](#631-batch-normalization-的算法)
 
 <!-- /TOC -->
 # 1 Python知识预备
@@ -2161,6 +2165,45 @@ w = np.random.randn(node_num, node_num) / np.sqrt(1.0/node_num)
 ```
 
 使用Xavier初始值后的结果如下图所示。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1682650854613-10dfb797-8236-42a2-82a4-9b9c15a25d32.png#averageHue=%23f8f8f8&clientId=u1e7ead7a-7a9f-4&from=paste&height=480&id=u6da83faf&originHeight=600&originWidth=800&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=12793&status=done&style=none&taskId=u2c409c10-03f7-4ab3-8761-d548200e81a&title=&width=640)<br />从这个结果可知，越是后面的层，图像变得越歪斜，但是呈现了比之前更有广度的分布。因为各层间传递的数据有适当的广度，所以sigmoid函数的表现力不受限制，有望进行高效的学习。
+
+### 6.2.3 ReLU的权重初始值
+当激活函数使用ReLU时，一般推荐使用ReLU专用的初始值，也就是Kaiming He等人推荐的初始值，也称为“He初始值”。当前一层的节点数为n 时，He 初始值使用标准差为![](https://cdn.nlark.com/yuque/__latex/f8a22f43ff54ac581b5e856d03f0636a.svg#card=math&code=%5Csqrt%7B%5Cfrac%7B2%7D%7Bn%7D%7D&id=K66s6)的高斯分布。<br />下面来看一下激活函数使用ReLU时激活值的分布。给出了3个实验的结果，依次是权重初始值为标准差是0.01的高斯分布（下文简写为“std = 0.01”）时、初始值为Xavier初始值时、初始值为ReLU专用的“He初始值”时的结果<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1682733429237-d0604fd2-44a7-4fea-a4d0-3464cc7f2752.png#averageHue=%23f8f8f8&clientId=u8524795f-50e2-4&from=paste&height=300&id=u7b9b5b8d&originHeight=600&originWidth=800&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=13020&status=done&style=none&taskId=u7d322b8c-9977-4a9c-91aa-c92d9ddd3a0&title=&width=400)![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1682733471102-45635c13-d3f3-479f-a186-dbc9a995935f.png#averageHue=%23f8f8f8&clientId=u8524795f-50e2-4&from=paste&height=300&id=ud2b6f227&originHeight=600&originWidth=800&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=12411&status=done&style=none&taskId=ue24497e4-93c0-4ccd-9311-e77b5adc198&title=&width=400)<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1682733511153-bb8c90a3-7f3b-4f0d-8097-4e85f798c449.png#averageHue=%23f8f8f8&clientId=u8524795f-50e2-4&from=paste&height=300&id=u3e1edfb6&originHeight=600&originWidth=800&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=12253&status=done&style=none&taskId=u6183ab7d-a74b-40f6-bb8a-96139b4bbdd&title=&width=400)<br />观察实验结果可知
+
+1. 当“std = 0.01”时，各层的激活值非常小
+2. 接下来是初始值为Xavier初始值时的结果。在这种情况下，随着层的加深，偏向一点点变大。实际上，层加深后，激活值的偏向变大，学习时会出现梯度消失的问题。
+3. 当初始值为He初始值时，各层中分布的广度相同。由于即便层加深，数据的广度也能保持不变，因此逆向传播时，也会传递合适的值。
+
+总结一下，当激活函数使用ReLU时，权重初始值使用He初始值，当激活函数为sigmoid或tanh等S型曲线函数时，初始值使用Xavier初始值。这是目前的最佳实践。
+
+### 6.2.4 基于MNIST数据集的权重初始值的比较
+下面通过实际的数据，观察不同的权重初始值的赋值方法会在多大程度上影响神经网络的学习。这里，我们基于std = 0.01、Xavier初始值、He初始值进行实验。实验结果如下图所示。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1682768068884-2bcbf1db-613c-443a-afac-348ffbb0199f.png#averageHue=%23fbfaf8&clientId=ud03c7d79-b997-4&from=paste&height=480&id=u319d14d8&originHeight=600&originWidth=800&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=47513&status=done&style=none&taskId=u843f4256-a327-41a7-b680-221362a9070&title=&width=640)
+
+这个实验中，神经网络有5层，每层有100个神经元，激活函数使用的是ReLU。从上图的结果可知，std = 0.01时完全无法进行学习。这和刚才观察到的激活值的分布一样，是因为正向传播中传递的值很小（集中在0附近的数据）。因此，逆向传播时求到的梯度也很小，权重几乎不进行更新。相反，当权重初始值为Xavier初始值和He初始值时，学习进行得很顺利。并且，我们发现He初始值时的学习进度更快一些。
+
+## 6.3 Batch Normalization
+### 6.3.1 Batch Normalization 的算法
+优点：
+
+- 可以使学习快速进行（可以增大学习率）。
+- 不那么依赖初始值（对于初始值不用那么神经质）。
+- 抑制过拟合（降低Dropout等的必要性）。
+
+Batch Norm的思路是调整各层的激活值分布使其拥有适当的广度。为此，要向神经网络中插入对数据分布进行正规化的层，即Batch Normalization层（下文简称Batch Norm层），如下图所示。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1682768562624-21b1c53d-ea35-4495-88ed-f220195bfdaf.png#averageHue=%23444444&clientId=ud03c7d79-b997-4&from=paste&height=201&id=u0f6c4c20&originHeight=251&originWidth=858&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=14812&status=done&style=none&taskId=u2533e81f-98ea-4ca1-8ff4-87d57a5e70a&title=&width=686.4)
+
+Batch Norm，顾名思义，以进行学习时的mini-batch为单位，按mini-batch进行正规化。具体而言，就是进行使数据分布的均值为0、方差为1的正规化。用数学式表示的话，如下所示。<br />![](https://cdn.nlark.com/yuque/__latex/7624513dfb7efbd9451d99186e84ed34.svg#card=math&code=%5Cmu_B%20%5Cleftarrow%20%5Cfrac%7B1%7D%7Bm%7D%20%5Csum_%7Bi%3D1%7D%5Emx_i%20%5C%5C%0A%5C%20%5C%5C%0A%5Csigma%5E2_B%20%5Cleftarrow%20%5Cfrac%7B1%7D%7Bm%7D%5Csum_%7Bi%3D1%7D%5Em%28x_i-%5Cmu_B%29%5E2%20%5C%5C%0A%5C%20%5C%5C%0A%5Chat%7Bx%7D%20%5Cleftarrow%20%5Cfrac%7Bx_i-%5Cmu_B%7D%7B%5Csqrt%7B%5Csigma_B%5E2%2B%5Cepsilon%7D%7D%0A%0A&id=K09Jt)<br />这里对 mini-batch 的 m 个输入数据的集合 B = {x1, x2, . . . , xm} 求均值![](https://cdn.nlark.com/yuque/__latex/342ce27e84d7a807b2cc3bc48fa19785.svg#card=math&code=%5Cmu_B&id=oPG9x)和方差![](https://cdn.nlark.com/yuque/__latex/44bd7a146d2d3d5be1e887d1e976647d.svg#card=math&code=%5Csigma%5E2_B&id=MIKQM)。然后，对输入数据进行均值为0、方差为1（合适的分布）的正规化。第三个式子中的 ![](https://cdn.nlark.com/yuque/__latex/7c102e7a7d231bf935f9bc23417779a8.svg#card=math&code=%5Cepsilon&id=cKKh7)是一个微小值，这是为了防止出现除以0的情况。<br />上式所做的是将mini-batch的输入数据{x1, x2, . . . , xm}变换为均值为0、方差为1的数据 ![](https://cdn.nlark.com/yuque/__latex/c3250d8e3ddfbbb53294f4de57c62c6b.svg#card=math&code=%5Chat%7Bx%7D&id=L5W6k)。通过将这个处理插入到激活函数的前面（或者后面），可以减小数据分布的偏向。
+
+接着，Batch Norm层会对正规化后的数据进行缩放和平移的变换，用数学式可以如下表示<br />![](https://cdn.nlark.com/yuque/__latex/eb59939534f83061388c4deef455a90b.svg#card=math&code=y_i%20%5Cleftarrow%20%5Cgamma%20%5Chat%7Bx_i%7D%20%2B%20%5Cbeta&id=yzknH)<br />这里，![](https://cdn.nlark.com/yuque/__latex/4aa418d6f0b6fbada90489b4374752e5.svg#card=math&code=%5Cgamma&id=TJ5RZ)和 ![](https://cdn.nlark.com/yuque/__latex/6100158802e722a88c15efc101fc275b.svg#card=math&code=%5Cbeta&id=LKUG5)是参数，一开始![](https://cdn.nlark.com/yuque/__latex/c60931bf99aee7b205a1bd42f4ceeaea.svg#card=math&code=%5Cgamma%20%3D%201%2C%20%5Cbeta%20%3D%200&id=Wgjkg)，然后再通过学习调整到合适的值。
+
+以上就是Batch Norm的算法。这个算法是神经网络上的正向传播。用计算图可以表示如下。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1682770047200-fd01046e-a3fb-4e2e-a6e4-5ef3f6b6a019.png#averageHue=%23424242&clientId=ud03c7d79-b997-4&from=paste&height=214&id=ucaaab434&originHeight=268&originWidth=858&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=40979&status=done&style=none&taskId=u92ab5981-8616-4877-8bda-ead14a25600&title=&width=686.4)
+
+
+
+
+
+
+
+
+
 
 
 
