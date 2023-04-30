@@ -111,6 +111,10 @@
         - [6.4.1 过拟合](#641-过拟合)
         - [6.4.2 权值衰减](#642-权值衰减)
         - [6.4.3 Dropout](#643-dropout)
+    - [6.5 超参数的验证](#65-超参数的验证)
+        - [6.5.1 验证数据](#651-验证数据)
+        - [6.5.2 超参数的最优化](#652-超参数的最优化)
+        - [6.5.3 超参数最优化的实现](#653-超参数最优化的实现)
 
 <!-- /TOC -->
 # 1 Python知识预备
@@ -2299,18 +2303,53 @@ class Dropout:
 现在，我们使用MNIST数据集进行验证，以确认Dropout的效果。另外，源代码中使用了Trainer类来简化实现。Dropout的实验和前面的实验一样，使用7层网络（每层有100个神经元，激活函数为ReLU），一个使用Dropout，另一个不使用Dropout，实验的结果如图所示。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1682822834369-b1b18c90-05c2-489a-bfbd-df64b9fc4549.png#averageHue=%23fcfaf9&clientId=ua97b6888-9e44-4&from=paste&height=300&id=ue9a2f6a4&originHeight=600&originWidth=800&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=29915&status=done&style=none&taskId=u44c32dd7-d7da-4c2d-8e2c-426d53a0cea&title=&width=400)![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1682822620871-40090cc1-662f-4b8c-b325-54a0e1ae25ae.png#averageHue=%23fcfaf9&clientId=ua97b6888-9e44-4&from=paste&height=300&id=u179462e6&originHeight=600&originWidth=800&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=34184&status=done&style=none&taskId=uc451006a-5e0e-4f86-a355-82adb4caa91&title=&width=400)<br />上图中，通过使用Dropout，训练数据和测试数据的识别精度的差距变小了。并且，训练数据也没有到达100%的识别精度。像这样，通过使用Dropout，即便是表现力强的网络，也可以抑制过拟合。
 
 
+## 6.5 超参数的验证
+> 超参数：各层的神经元数量、batch大小、参数更新时的学习率或权值衰减等
 
 
+### 6.5.1 验证数据
+注意：不能使用测试数据评估超参数的性能。这是因为如果使用测试数据调整超参数，超参数的值会对测试数据发生过拟合。因此，调整超参数时，必须使用超参数专用的确认数据。
+> 用于调整超参数的数据，一般称为验证数据（validation data）。我们使用这个验证数据来评估超参数的好坏。
 
+训练数据用于参数（权重和偏置）的学习，验证数据用于超参数的性能评估。为了确认泛化能力，要在最后使用（比较理想的是只用一次）测试数据。
 
+根据不同的数据集，有的会事先分成训练数据、验证数据、测试数据三部分，有的只分成训练数据和测试数据两部分，有的则不进行分割。在这种情况下，用户需要自行进行分割。如果是MNIST数据集，获得验证数据的最简单的方法就是从训练数据中事先分割20%作为验证数据，代码如下所示。
+```python
+(x_train, t_train), (x_test, t_test) = load_mnist()
 
+# 打乱训练数据
+x_train, t_train = shuffle_dataset(x_train, t_train)
 
+# 分割验证数据
+validation_rate = 0.20
+validation_num = int(x_train.shape[0] * validation_rate)
 
+x_val = x_train[:validation_num]
+t_val = t_train[:validation_num]
+x_train = x_train[validation_num:]
+t_train = t_train[validation_num:]
+```
+这里，分割训练数据前，先打乱了输入数据和教师标签。这是因为数据集的数据可能存在偏向（比如，数据从“0”到“10”按顺序排列等）。
 
+### 6.5.2 超参数的最优化
+进行超参数的最优化时，需要逐渐缩小超参数的“好值”的存在范围。在超参数的搜索中，需要尽早放弃那些不符合逻辑的超参数。于是，在超参数的最优化中，减少学习的epoch，缩短一次评估所需的时间是一个不错的办法。归纳超参数最优化内容如下。
 
+1. 设定超参数的范围。
+2. 从设定的超参数范围中随机采样。
+3. 使用步骤1中采样到的超参数的值进行学习，通过验证数据评估识别精度（但是要将epoch设置得很小）。
+4. 重复步骤1和步骤2（100次等），根据它们的识别精度的结果，缩小超参数的范围。
 
+反复进行上述操作，不断缩小超参数的范围，在缩小到一定程度时，从该范围中选出一个超参数的值。这就是进行超参数的最优化的一种方法。
 
+### 6.5.3 超参数最优化的实现
+现在，我们使用MNIST数据集进行超参数的最优化。这里我们将学习率和控制权值衰减强度的系数（下文称为“权值衰减系数”）这两个超参数的搜索问题作为对象。
 
+通过从 0.001到 1000这样的对数尺度的范围中随机采样进行超参数的验证。这在Python中可以写成10 ** np.random.uniform(-3, 3)。在该实验中，权值衰减系数的初始范围为![](https://cdn.nlark.com/yuque/__latex/69806b82ffec24468b61d0dfa2945017.svg#card=math&code=10%5E%7B-8%7D&id=hk4vo)到![](https://cdn.nlark.com/yuque/__latex/0862c3e735b7923c475f6e3c30ff4961.svg#card=math&code=10%5E%7B-4%7D&id=lmS6V)，学习率的初始范围为![](https://cdn.nlark.com/yuque/__latex/1f35f0355bf21f1a16eea780823a6768.svg#card=math&code=10%5E%7B-6%7D&id=Urkht)到![](https://cdn.nlark.com/yuque/__latex/b6ff88cd45e46c1201e2a4dcdafd91e0.svg#card=math&code=10%5E%7B-2%7D&id=bpx5P)。此时，超参数的随机采样的代码如下所示。
+```python
+weight_decay = 10 ** np.random.uniform(-8, -4)
+lr = 10 ** np.random.uniform(-6, -2)
+```
+像这样进行随机采样后，再使用那些值进行学习。之后，多次使用各种超参数的值重复进行学习，观察合乎逻辑的超参数在哪里。实验结果如下所示。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1682843311782-0d3ff2a7-14af-43bd-a41d-ad9a22b2fde4.png#averageHue=%23fbfbfa&clientId=ua97b6888-9e44-4&from=paste&height=1054&id=sR5q3&originHeight=1317&originWidth=2560&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=209147&status=done&style=none&taskId=u2ff7ce99-b341-49fb-bec8-37cff698b0f&title=&width=2048)<br />上图中，按识别精度从高到低的顺序排列了验证数据的学习的变化。从图中可知，直到“Best-5”左右，学习进行得都很顺利。因此，我们来观察一下“Best-5”之前的超参数的值（学习率和权值衰减系数），结果如下所示。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1682843377286-cb3295f9-032a-4aad-9568-a26a56bfb40e.png#averageHue=%23313a41&clientId=ua97b6888-9e44-4&from=paste&height=98&id=u90b4368b&originHeight=122&originWidth=859&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=35635&status=done&style=none&taskId=uc3088e59-23ec-4d62-9745-3cac4ab18aa&title=&width=687.2)<br />从这个结果可以看出，学习率在0.001到0.01、权值衰减系数在![](https://cdn.nlark.com/yuque/__latex/69806b82ffec24468b61d0dfa2945017.svg#card=math&code=10%5E%7B-8%7D&id=CWqYr)到![](https://cdn.nlark.com/yuque/__latex/1f35f0355bf21f1a16eea780823a6768.svg#card=math&code=10%5E%7B-6%7D&id=n0GhO)之间时，学习可以顺利进行。像这样，观察可以使学习顺利进行的超参数的范围，从而缩小值的范围。然后，在这个缩小的范围中重复相同的操作。这样就能缩小到合适的超参数的存在范围，然后在某个阶段，选择一个最终的超参数的值。
 
 
 
