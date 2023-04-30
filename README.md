@@ -106,6 +106,7 @@
         - [6.2.4 基于MNIST数据集的权重初始值的比较](#624-基于mnist数据集的权重初始值的比较)
     - [6.3 Batch Normalization](#63-batch-normalization)
         - [6.3.1 Batch Normalization 的算法](#631-batch-normalization-的算法)
+        - [6.3.2 Batch Normalization的评估](#632-batch-normalization的评估)
 
 <!-- /TOC -->
 # 1 Python知识预备
@@ -2196,9 +2197,12 @@ Batch Norm，顾名思义，以进行学习时的mini-batch为单位，按mini-b
 
 以上就是Batch Norm的算法。这个算法是神经网络上的正向传播。用计算图可以表示如下。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1682770047200-fd01046e-a3fb-4e2e-a6e4-5ef3f6b6a019.png#averageHue=%23424242&clientId=ud03c7d79-b997-4&from=paste&height=214&id=ucaaab434&originHeight=268&originWidth=858&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=40979&status=done&style=none&taskId=u92ab5981-8616-4877-8bda-ead14a25600&title=&width=686.4)
 
+### 6.3.2 Batch Normalization的评估
+现在我们使用 Batch Norm 层进行实验。首先，使用 MNIST 数据集，观察使用Batch Norm层和不使用Batch Norm层时学习的过程会如何变化。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1682817854310-680f5693-9d21-4470-938f-93e59a155990.png#averageHue=%23414141&clientId=ua97b6888-9e44-4&from=paste&height=451&id=u8cac3f66&originHeight=564&originWidth=702&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=43112&status=done&style=none&taskId=uea15a25b-62a1-4f59-b231-487b202b926&title=&width=561.6)<br />由上图结果可知，使用Batch Norm后，学习进行得更快了。
 
+接着，给予不同的初始值尺度，观察学习的过程如何变化。下图是权重初始值的标准差为各种不同的值时的学习过程图。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1682818095644-eccf54e1-7a46-4c32-9846-90c8ae867582.png#averageHue=%23fafaf9&clientId=ua97b6888-9e44-4&from=paste&height=1054&id=ue9fc8ed6&originHeight=1317&originWidth=2560&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=222360&status=done&style=none&taskId=ud48fd730-d5d3-4839-b91d-e25021ea67a&title=&width=2048)<br />我们发现，几乎所有的情况下都是使用Batch Norm时学习进行得更快。同时也可以发现，实际上，在不使用Batch Norm的情况下，如果不赋予一个尺度好的初始值，学习将完全无法进行。
 
-
+综上，通过使用Batch Norm，可以推动学习的进行。并且，对权重初始值变得健壮（“对初始值健壮”表示不那么依赖初始值）。
 
 
 
