@@ -107,6 +107,10 @@
     - [6.3 Batch Normalization](#63-batch-normalization)
         - [6.3.1 Batch Normalization 的算法](#631-batch-normalization-的算法)
         - [6.3.2 Batch Normalization的评估](#632-batch-normalization的评估)
+    - [6.4 正则化](#64-正则化)
+        - [6.4.1 过拟合](#641-过拟合)
+        - [6.4.2 权值衰减](#642-权值衰减)
+        - [6.4.3 Dropout](#643-dropout)
 
 <!-- /TOC -->
 # 1 Python知识预备
@@ -2203,6 +2207,118 @@ Batch Norm，顾名思义，以进行学习时的mini-batch为单位，按mini-b
 接着，给予不同的初始值尺度，观察学习的过程如何变化。下图是权重初始值的标准差为各种不同的值时的学习过程图。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1682818095644-eccf54e1-7a46-4c32-9846-90c8ae867582.png#averageHue=%23fafaf9&clientId=ua97b6888-9e44-4&from=paste&height=1054&id=ue9fc8ed6&originHeight=1317&originWidth=2560&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=222360&status=done&style=none&taskId=ud48fd730-d5d3-4839-b91d-e25021ea67a&title=&width=2048)<br />我们发现，几乎所有的情况下都是使用Batch Norm时学习进行得更快。同时也可以发现，实际上，在不使用Batch Norm的情况下，如果不赋予一个尺度好的初始值，学习将完全无法进行。
 
 综上，通过使用Batch Norm，可以推动学习的进行。并且，对权重初始值变得健壮（“对初始值健壮”表示不那么依赖初始值）。
+
+## 6.4 正则化
+> 过拟合指的是只能拟合训练数据，但不能很好地拟合不包含在训练数据中的其他数据的状态。
+
+
+### 6.4.1 过拟合
+发生过拟合的原因，主要有以下两个。
+
+- 模型拥有大量参数、表现力强。
+- 训练数据少。
+
+这里，我们故意满足这两个条件，制造过拟合现象。为此，要从MNIST数据集原本的60000个训练数据中只选定300个，并且，为了增加网络的复杂度，使用7层网络（每层有100个神经元，激活函数为ReLU）。
+
+1. 读入数据
+```python
+(x_train, t_train), (x_test, t_test) = load_mnist(normalize=True)
+# 为了再现过拟合，减少学习数据
+x_train = x_train[:300]
+t_train = t_train[:300]
+```
+
+2. 训练数据（按epoch分别算出所有训练数据和所有测试数据的识别精度）
+```python
+network = MultiLayerNet(input_size=784, hidden_size_list=[100, 100, 100,100, 100, 100], output_size=10)
+optimizer = SGD(lr=0.01) # 用学习率为0.01的SGD更新参数
+
+max_epochs = 201
+train_size = x_train.shape[0]
+batch_size = 100
+
+train_loss_list = []
+train_acc_list = []
+test_acc_list = []
+
+iter_per_epoch = max(train_size / batch_size, 1)
+epoch_cnt = 0
+
+for i in range(1000000000):
+    batch_mask = np.random.choice(train_size, batch_size)
+    x_batch = x_train[batch_mask]
+    t_batch = t_train[batch_mask]
+
+    grads = network.gradient(x_batch, t_batch)
+    optimizer.update(network.params, grads)
+
+    if i % iter_per_epoch == 0:
+        train_acc = network.accuracy(x_train, t_train)
+        test_acc = network.accuracy(x_test, t_test)
+        train_acc_list.append(train_acc)
+        test_acc_list.append(test_acc)
+
+        print("epoch:" + str(epoch_cnt) + ", train acc:" + str(train_acc) + ", test acc:" + str(test_acc))
+
+        epoch_cnt += 1
+        if epoch_cnt >= max_epochs:
+            break
+```
+
+train_acc_list和test_acc_list中以epoch为单位（看完了所有训练数据的单位）保存识别精度。现在，我们将这些列表（train_acc_list、test_acc_list）绘成图，结果如下图所示。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1682821248050-e42eb92b-fad5-4170-94ab-405a180a4c3b.png#averageHue=%23fcfaf9&clientId=ua97b6888-9e44-4&from=paste&height=480&id=u4b4fbace&originHeight=600&originWidth=800&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=32232&status=done&style=none&taskId=u516d73f0-feba-4550-adbf-5efc77a6f6d&title=&width=640)<br />过了 100 个 epoch 左右后，用训练数据测量到的识别精度几乎都为100%。但是，对于测试数据，离100%的识别精度还有较大的差距。如此大的识别精度差距，是只拟合了训练数据的结果。从图中可知，模型对训练时没有使用的一般数据（测试数据）拟合得不是很好。
+
+### 6.4.2 权值衰减
+> 权值衰减是一直以来经常被使用的一种抑制过拟合的方法。该方法通过在学习的过程中对大的权重进行惩罚，来抑制过拟合。很多过拟合原本就是因为权重参数取值过大才发生的。
+
+如果将权重记为W，L2范数的权值衰减就是![](https://cdn.nlark.com/yuque/__latex/e4a2bd7b70cde95138f14c6fc1c332d5.svg#card=math&code=%5Cfrac%7B1%7D%7B2%7D%20%5Clambda%20W%5E2&id=oGv5s)，然后将这个![](https://cdn.nlark.com/yuque/__latex/e4a2bd7b70cde95138f14c6fc1c332d5.svg#card=math&code=%5Cfrac%7B1%7D%7B2%7D%20%5Clambda%20W%5E2&id=Y72TZ)加到损失函数上。这里，λ是控制正则化强度的超参数。λ设置得越大，对大的权重施加的惩罚就越重。此外，![](https://cdn.nlark.com/yuque/__latex/e4a2bd7b70cde95138f14c6fc1c332d5.svg#card=math&code=%5Cfrac%7B1%7D%7B2%7D%20%5Clambda%20W%5E2&id=d8xlx)开头的![](https://cdn.nlark.com/yuque/__latex/72067414d4f00caec2212e5c10479a88.svg#card=math&code=1%5Cover2&id=bobmd)是用于将![](https://cdn.nlark.com/yuque/__latex/e4a2bd7b70cde95138f14c6fc1c332d5.svg#card=math&code=%5Cfrac%7B1%7D%7B2%7D%20%5Clambda%20W%5E2&id=iVmmj)的求导结果变成λW的调整用常量。
+
+对于刚刚进行的实验，应用λ = 0.1的权值衰减，结果如下图所示。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1682821534433-df23fbae-f570-41be-b341-466397f7b4ed.png#averageHue=%23fcfaf9&clientId=ua97b6888-9e44-4&from=paste&height=480&id=u75f903cc&originHeight=600&originWidth=800&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=39085&status=done&style=none&taskId=udf1d265f-5f85-40cd-bad3-bcabea7bcfd&title=&width=640)<br />虽然训练数据的识别精度和测试数据的识别精度之间有差距，但是与没有使用权值衰减的上图的结果相比，差距变小了。这说明过拟合受到了抑制。此外，还要注意，训练数据的识别精度没有达到100%（1.0）
+
+### 6.4.3 Dropout
+> Dropout是一种在学习的过程中随机删除神经元的方法。训练时，随机选出隐藏层的神经元，然后将其删除。
+
+被删除的神经元不再进行信号的传递，如下图所示。训练时，每传递一次数据，就会随机选择要删除的神经元。然后，测试时，虽然会传递所有的神经元信号，但是对于各个神经元的输出，要乘上训练时的删除比例后再输出。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1682821635957-8a97ad89-1f61-4600-b5be-397bbc89a0a6.png#averageHue=%23434343&clientId=ua97b6888-9e44-4&from=paste&height=305&id=u643b7bf4&originHeight=381&originWidth=859&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=158316&status=done&style=none&taskId=u6d9ae83d-4c48-4ed0-bc6f-c0947077f04&title=&width=687.2)
+
+下面我们来实现Dropout。这里的实现重视易理解性。不过，因为训练时如果进行恰当的计算的话，正向传播时单纯地传递数据就可以了（不用乘以删除比例），所以深度学习的框架中进行了这样的实现。
+```python
+class Dropout:
+    def __init__(self, dropout_ratio=0.5):
+        self.dropout_ratio = dropout_ratio
+        self.mask = None
+    def forward(self, x, train_flg=True):
+        if train_flg:
+            self.mask = np.random.rand(*x.shape) > self.dropout_ratio
+            return x * self.mask
+        else:
+            return x * (1.0 - self.dropout_ratio)
+    def backward(self, dout):
+        return dout * self.mask
+```
+这里的要点是，每次正向传播时，self.mask中都会以False的形式保存要删除的神经元。self.mask会随机生成和x形状相同的数组，并将值比dropout_ratio大的元素设为True。反向传播时的行为和ReLU相同。也就是说，正向传播时传递了信号的神经元，反向传播时按原样传递信号；正向传播时没有传递信号的神经元，反向传播时信号将停在那里。
+
+现在，我们使用MNIST数据集进行验证，以确认Dropout的效果。另外，源代码中使用了Trainer类来简化实现。Dropout的实验和前面的实验一样，使用7层网络（每层有100个神经元，激活函数为ReLU），一个使用Dropout，另一个不使用Dropout，实验的结果如图所示。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1682822834369-b1b18c90-05c2-489a-bfbd-df64b9fc4549.png#averageHue=%23fcfaf9&clientId=ua97b6888-9e44-4&from=paste&height=300&id=ue9a2f6a4&originHeight=600&originWidth=800&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=29915&status=done&style=none&taskId=u44c32dd7-d7da-4c2d-8e2c-426d53a0cea&title=&width=400)![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1682822620871-40090cc1-662f-4b8c-b325-54a0e1ae25ae.png#averageHue=%23fcfaf9&clientId=ua97b6888-9e44-4&from=paste&height=300&id=u179462e6&originHeight=600&originWidth=800&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=34184&status=done&style=none&taskId=uc451006a-5e0e-4f86-a355-82adb4caa91&title=&width=400)<br />上图中，通过使用Dropout，训练数据和测试数据的识别精度的差距变小了。并且，训练数据也没有到达100%的识别精度。像这样，通过使用Dropout，即便是表现力强的网络，也可以抑制过拟合。
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
