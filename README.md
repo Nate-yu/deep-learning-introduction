@@ -115,6 +115,13 @@
         - [6.5.1 验证数据](#651-验证数据)
         - [6.5.2 超参数的最优化](#652-超参数的最优化)
         - [6.5.3 超参数最优化的实现](#653-超参数最优化的实现)
+- [7 卷积神经网络](#7-卷积神经网络)
+    - [7.1 整体结构](#71-整体结构)
+    - [7.2 卷积层](#72-卷积层)
+        - [7.2.1 全连接层存在的问题](#721-全连接层存在的问题)
+        - [7.2.2 卷积运算](#722-卷积运算)
+        - [7.2.3 填充](#723-填充)
+        - [7.2.4 步幅](#724-步幅)
 
 <!-- /TOC -->
 # 1 Python知识预备
@@ -2351,8 +2358,62 @@ lr = 10 ** np.random.uniform(-6, -2)
 ```
 像这样进行随机采样后，再使用那些值进行学习。之后，多次使用各种超参数的值重复进行学习，观察合乎逻辑的超参数在哪里。实验结果如下所示。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1682843311782-0d3ff2a7-14af-43bd-a41d-ad9a22b2fde4.png#averageHue=%23fbfbfa&clientId=ua97b6888-9e44-4&from=paste&height=1054&id=sR5q3&originHeight=1317&originWidth=2560&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=209147&status=done&style=none&taskId=u2ff7ce99-b341-49fb-bec8-37cff698b0f&title=&width=2048)<br />上图中，按识别精度从高到低的顺序排列了验证数据的学习的变化。从图中可知，直到“Best-5”左右，学习进行得都很顺利。因此，我们来观察一下“Best-5”之前的超参数的值（学习率和权值衰减系数），结果如下所示。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1682843377286-cb3295f9-032a-4aad-9568-a26a56bfb40e.png#averageHue=%23313a41&clientId=ua97b6888-9e44-4&from=paste&height=98&id=u90b4368b&originHeight=122&originWidth=859&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=35635&status=done&style=none&taskId=uc3088e59-23ec-4d62-9745-3cac4ab18aa&title=&width=687.2)<br />从这个结果可以看出，学习率在0.001到0.01、权值衰减系数在![](https://cdn.nlark.com/yuque/__latex/69806b82ffec24468b61d0dfa2945017.svg#card=math&code=10%5E%7B-8%7D&id=CWqYr)到![](https://cdn.nlark.com/yuque/__latex/1f35f0355bf21f1a16eea780823a6768.svg#card=math&code=10%5E%7B-6%7D&id=n0GhO)之间时，学习可以顺利进行。像这样，观察可以使学习顺利进行的超参数的范围，从而缩小值的范围。然后，在这个缩小的范围中重复相同的操作。这样就能缩小到合适的超参数的存在范围，然后在某个阶段，选择一个最终的超参数的值。
 
+# 7 卷积神经网络
+> 卷积神经网络（Convolutional Neural Network，CNN），CNN被用于图像识别、语音识别等各种场合
 
 
+## 7.1 整体结构
+> CNN中新出现了卷积层（Convolution层）和池化层（Pooling层）
+
+之前介绍的神经网络中，相邻层的所有神经元之间都有连接，这称为全连接（fully-connected）。另外，我们用Affine层实现了全连接层。如果使用这个Affine层，一个5层的全连接的神经网络就可以通过下图所示的网络结构来实现。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1683188143169-30350504-8646-4143-9309-8bdf56379782.png#averageHue=%23424242&clientId=u7b232bfd-962a-4&from=paste&height=168&id=uf14fcadc&originHeight=210&originWidth=863&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=11770&status=done&style=none&taskId=u4c76c176-d6da-4c46-b9f5-3c6ef01e4db&title=&width=690.4)<br />如上图所示，全连接的神经网络中，Affine层后面跟着激活函数ReLU层（或者 Sigmoid 层）。这里堆叠了 4 层“Affine-ReLU”组合，然后第 5 层是Affine层，最后由Softmax层输出最终结果（概率）。
+
+而下面是CNN的一个例子。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1683188209057-51b95893-8a23-48e4-bc28-b18d608d1ae0.png#averageHue=%23464646&clientId=u7b232bfd-962a-4&from=paste&height=151&id=ua7b542a6&originHeight=189&originWidth=861&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=13883&status=done&style=none&taskId=u214c0d4e-36e5-4676-be08-f29f2cef93a&title=&width=688.8)<br />如上图所示，CNN中新增了 Convolution 层和 Pooling 层。CNN 的层的连接顺序是“Convolution - ReLU -（Pooling）”（Pooling 层有时会被省略）。这可以理解为之前的“Affine - ReLU”连接被替换成了“Convolution - ReLU -（Pooling）”连接。
+
+还需要注意的是，在上图的 CNN 中，靠近输出的层中使用了之前的“Affine - ReLU”组合。此外，最后的输出层中使用了之前的“Affine - Softmax”组合。这些都是一般的CNN中比较常见的结构。
+
+## 7.2 卷积层
+### 7.2.1 全连接层存在的问题
+> 在全连接层中，相邻层的神经元全部连接在一起，输出的数量可以任意决定。
+
+
+全连接层存在的问题：数据的形状被“忽视”了。比如，输入数据是图像时，图像通常是高、长、通道方向上的3维形状。但是，向全连接层输入时，需要将3维数据拉平为1维数据。因为全连接层会忽视形状，将全部的输入数据作为相同的神经元（同一维度的神经元）处理，所以无法利用与形状相关的信息
+
+而卷积层可以保持形状不变。当输入数据是图像时，卷积层会以 3 维数据的形式接收输入数据，并同样以3 维数据的形式输出至下一层。因此，在 CNN 中，可以（有可能）正确理解图像等具有形状的数据。
+
+在 CNN 中，有时将卷积层的输入输出数据称为特征图（feature map）。其中，卷积层的输入数据称为输入特征图（input feature map），输出数据称为输出特征图（output feature map）。
+
+### 7.2.2 卷积运算
+卷积层进行的处理就是卷积运算。卷积运算相当于图像处理中的“滤波器运算”。下面是一个具体例子。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1683190065731-75863618-0fa1-42b4-9288-e89559893006.png#averageHue=%23414141&clientId=u7b232bfd-962a-4&from=paste&height=246&id=u7d8dbf0c&originHeight=308&originWidth=860&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=24721&status=done&style=none&taskId=u36959c18-a093-44c8-b7cd-ac71fd2619d&title=&width=688)<br />中间的符号表示卷积运算。如上图所示，卷积运算对输入数据应用滤波器。在这个例子中，输入数据是有高长方向的形状的数据，滤波器也一样，有高长方向上的维度。假设用（height, width）表示数据和滤波器的形状，则在本例中，输入大小是(4, 4)，滤波器大小是(3, 3)，输出大小是(2, 2)。
+
+下面来解释一下卷积运算的例子中都进行了什么样的计算。下图展示了卷积运算的计算顺序。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1683190237122-0fda626e-b00b-4c89-b3d7-ac64a515b30b.png#averageHue=%23454545&clientId=u7b232bfd-962a-4&from=paste&height=877&id=u83d1b62f&originHeight=1096&originWidth=859&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=73215&status=done&style=none&taskId=uafe6ac84-0506-4a70-97c8-37aa4113aa8&title=&width=687.2)<br />对于输入数据，卷积运算以一定间隔滑动滤波器的窗口并应用。这里所说的窗口是指图上图中灰色的3 × 3的部分。<br />如图所示，将**各个位置上滤波器的元素和输入的对应元素相乘**，然后再**求和**（有时将这个计算称为乘积累加运算）。然后，将这个结果保存到输出的对应位置。将这个过程在所有位置都进行一遍，就可以得到卷积运算的输出。
+
+在全连接的神经网络中，除了权重参数，还存在偏置。CNN中，滤波器的参数就对应之前的权重。并且，CNN中也存在偏置。包含偏置的卷积运算的处理流如下图所示。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1683190545003-4bad755e-91ad-4b2a-95c0-9559055cb4f1.png#averageHue=%23424242&clientId=u7b232bfd-962a-4&from=paste&height=174&id=u007e3f21&originHeight=217&originWidth=858&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=29170&status=done&style=none&taskId=u3d42e35f-4971-447d-9b9a-4849bc3ec81&title=&width=686.4)<br />如上图所示，向应用了滤波器的数据加上了偏置。偏置通常只有1个（1 × 1）（本例中，相对于应用了滤波器的4个数据，偏置只有1个），这个值会被加到应用了滤波器的所有元素上。
+
+### 7.2.3 填充
+> 在进行卷积层的处理之前，有时要向输入数据的周围填入固定的数据（比如0等），这称为填充（padding）
+
+比如在下图的例子中，对大小为(4, 4)的输入数据应用了幅度为1的填充。（“幅度为1的填充”是指用幅度为1像素的0填充周围。）<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1683190719229-7d0e30da-716c-47c1-a372-30d896c56f43.png#averageHue=%23424242&clientId=u7b232bfd-962a-4&from=paste&height=289&id=uc382ff31&originHeight=361&originWidth=859&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=40511&status=done&style=none&taskId=ub3162c68-da55-4073-a03f-9992bd56b52&title=&width=687.2)<br />图中用虚线表示填充，并省略了填充的内容“0”。如上图所示，通过填充，大小为(4, 4)的输入数据变成了(6, 6)的形状。然后，应用大小为(3, 3)的滤波器，生成了大小为(4, 4)的输出数据。
+
+### 7.2.4 步幅
+> 应用滤波器的位置间隔称为步幅（stride）
+
+之前的例子中步幅都是1，如果将步幅设为2，则如下图所示，应用滤波器的窗口的间隔变为2个元素。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1683190982768-2eb781f6-a055-4cc6-80e5-fda90ecee2d3.png#averageHue=%23444444&clientId=u7b232bfd-962a-4&from=paste&height=490&id=u4dc61767&originHeight=612&originWidth=861&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=61754&status=done&style=none&taskId=ue4ac2b72-aabd-419d-95a3-92cdefd7e9b&title=&width=688.8)<br />像这样，步幅可以指定应用滤波器的间隔。综上，增大步幅后，输出大小会变小。而增大填充后，输出大小会变大。
+
+将这样的关系写成算式。假设输入大小为(H, W)，滤波器大小为(FH, FW)，输出大小为(OH, OW)，填充为P，步幅为S。此时，输出大小可通过下面的式子进行计算。<br />![](https://cdn.nlark.com/yuque/__latex/1bbab030427e686025027005b59113cd.svg#card=math&code=OH%3D%5Cfrac%7BH%2B2P-FH%7D%7BS%7D%2B1%20%5C%5C%0A%5C%20%5C%5C%0AOW%3D%5Cfrac%7BW%2B2P-FW%7D%7BS%7D%2B1&id=scNRy)<br />使用此算式做几个计算。
+
+1. 输入大小(H, W)：(4,4)；填充P：1；步幅S：1；滤波器大小(FH, FW)：(3,3)
+
+![](https://cdn.nlark.com/yuque/__latex/17cc473a17c08b1bc9be940e9328155d.svg#card=math&code=OH%3D%5Cfrac%7B4%2B2%C2%B71-3%7D%7B1%7D%2B1%3D4%20%5C%5C%0A%5C%20%5C%5C%0AOW%3D%5Cfrac%7B4%2B2%C2%B71-3%7D%7B1%7D%2B1%3D4&id=ExYnS)
+
+2. 输入大小(H, W)：(7, 7)；填充P：0；步幅S：2；滤波器大小(FH, FW)：(3, 3)
+
+![](https://cdn.nlark.com/yuque/__latex/fbfe22a8c46aab816511ac6c1db3ce70.svg#card=math&code=OH%3D%5Cfrac%7B7%2B2%C2%B70-3%7D%7B2%7D%2B1%3D3%20%5C%5C%0A%5C%20%5C%5C%0AOW%3D%5Cfrac%7B7%2B2%C2%B70-3%7D%7B2%7D%2B1%3D3&id=fYC0n)
+
+3. 输入大小(H, W)：(28, 31)；填充P：2；步幅S：3；滤波器大小(FH, FW)：(5, 5)
+
+![](https://cdn.nlark.com/yuque/__latex/300aa959e752d8e02e9526fffba68016.svg#card=math&code=OH%3D%5Cfrac%7B28%2B2%C2%B72-5%7D%7B3%7D%2B1%3D10%20%5C%5C%0A%5C%20%5C%5C%0AOW%3D%5Cfrac%7B31%2B2%C2%B72-5%7D%7B3%7D%2B1%3D11&id=b8l7S)
+
+如这些例子所示，通过在计算式中代入值，就可以计算输出大小。这里需要注意的是，虽然只要代入值就可以计算输出大小，但是所设定的值必须使式 ![](https://cdn.nlark.com/yuque/__latex/d8a947a8423980f6d0dfc4103451aee7.svg#card=math&code=%5Cfrac%7BH%2B2P-FH%7D%7BS%7D&id=Ozopp)和![](https://cdn.nlark.com/yuque/__latex/22b641e6606759b9d2ef4d8cf2758d0c.svg#card=math&code=%5Cfrac%7BW%2B2P-FW%7D%7BS%7D&id=QeiIY)分别可以除尽。当输出大小无法除尽时（结果是小数时），需要采取报错等对策。
 
 
 
