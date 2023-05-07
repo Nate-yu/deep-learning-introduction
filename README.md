@@ -127,6 +127,9 @@
         - [7.2.7 批处理](#727-批处理)
     - [7.3 池化层](#73-池化层)
     - [7.4 卷积层和池化层的实现](#74-卷积层和池化层的实现)
+        - [7.4.1 4维数组](#741-4维数组)
+        - [7.4.2 基于im2col的展开](#742-基于im2col的展开)
+        - [7.4.3 卷积层的实现](#743-卷积层的实现)
 
 <!-- /TOC -->
 # 1 Python知识预备
@@ -260,14 +263,14 @@ plt.show()
 ## 2.1 感知机的定义
 > 感知机接收多个输入信号，输出一个信号。
 
-和实际的电流不同的是，感知机的信号只有“流/不流”（1/0）两种取值。0对应“不传递信号”，1对应“传递信号”。如下图所示是一个接收两个输入信号的感知机的例子。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1681440819573-d2627755-1569-47c2-9fe4-df8fea50fd57.png#averageHue=%23414141&clientId=u3972c055-bc56-4&from=paste&height=419&id=u6bf328c9&originHeight=524&originWidth=1493&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=35135&status=done&style=none&taskId=u9214393e-87a7-4342-ba07-825d3de6f98&title=&width=1194.4)<br />其中，x1、x2是输入信号，y 是输出信号，w1、w2是权重。图中的圆称为“神经元”或者“节点”。输入信号被送往神经元时，会被分别乘以固定的权重（w1x1、w2x2）。神经元会计算传送过来的信号的总和，只有当这个总和超过了某个界限值时，才会输出1。这也称为“神经元被激活” 。这里将这个界限值称为阈值，用符号θ表示。<br />上述即为感知机的运行原理，用数学公式表示即为如下：<br />$y= \begin{cases}0 \quad (w_1x_1 + w_2x_2\le\theta)\\ 1\quad (w_1x_1+w_2x_2>\theta)\end{cases}$<br />感知机的多个输入信号都有各自固有的权重，这些权重发挥着控制各个信号的重要性的作用。即权重越大，对应该权重的信号的重要性就越高。
+和实际的电流不同的是，感知机的信号只有“流/不流”（1/0）两种取值。0对应“不传递信号”，1对应“传递信号”。如下图所示是一个接收两个输入信号的感知机的例子。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1681440819573-d2627755-1569-47c2-9fe4-df8fea50fd57.png#averageHue=%23414141&clientId=u3972c055-bc56-4&from=paste&height=419&id=u6bf328c9&originHeight=524&originWidth=1493&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=35135&status=done&style=none&taskId=u9214393e-87a7-4342-ba07-825d3de6f98&title=&width=1194.4)<br />其中，x1、x2是输入信号，y 是输出信号，w1、w2是权重。图中的圆称为“神经元”或者“节点”。输入信号被送往神经元时，会被分别乘以固定的权重（w1x1、w2x2）。神经元会计算传送过来的信号的总和，只有当这个总和超过了某个界限值时，才会输出1。这也称为“神经元被激活” 。这里将这个界限值称为阈值，用符号θ表示。<br />上述即为感知机的运行原理，用数学公式表示即为如下：<br />![](https://cdn.nlark.com/yuque/__latex/b5414eef4b7284e5f0a28b65fa4257db.svg#card=math&code=y%3D%20%5Cbegin%7Bcases%7D0%20%5Cquad%20%28w_1x_1%20%2B%20w_2x_2%5Cle%5Ctheta%29%5C%5C%201%5Cquad%20%28w_1x_1%2Bw_2x_2%3E%5Ctheta%29%5Cend%7Bcases%7D&id=UYdgq)<br />感知机的多个输入信号都有各自固有的权重，这些权重发挥着控制各个信号的重要性的作用。即权重越大，对应该权重的信号的重要性就越高。
 
 ## 2.2 简单逻辑电路
 > 与门：与门是有两个输入和一个输出的门电路。
 
 下表这种输入信号和输出信号的对应表称为“真值表”。与门仅在两个输入均为1输出1，其他时候则输出0。
 
-| $x_1$ | $x_2$ | $y$ |
+| ![](https://cdn.nlark.com/yuque/__latex/0e8831d88c93179dbe6c8b5e3678ca20.svg#card=math&code=x_1&id=dGM7P) | ![](https://cdn.nlark.com/yuque/__latex/b526050a1759d2db5c1ae7e883a48312.svg#card=math&code=x_2&id=eSeEX) | ![](https://cdn.nlark.com/yuque/__latex/947eb82adf8e060dd9e14a2ced68c45a.svg#card=math&code=y%0A&id=AxfoL) |
 | --- | --- | --- |
 | 0 | 0 | 0 |
 | 1 | 0 | 0 |
@@ -279,7 +282,7 @@ plt.show()
 
 用真值表表示的话，如下表所示，仅当x1和x2同时为1时输出0，其他时候则输出1。
 
-| $x_1$ | $x_2$ | $y$ |
+| ![](https://cdn.nlark.com/yuque/__latex/0e8831d88c93179dbe6c8b5e3678ca20.svg#card=math&code=x_1&id=wTv9h) | ![](https://cdn.nlark.com/yuque/__latex/b526050a1759d2db5c1ae7e883a48312.svg#card=math&code=x_2&id=Z60st) | ![](https://cdn.nlark.com/yuque/__latex/947eb82adf8e060dd9e14a2ced68c45a.svg#card=math&code=y%0A&id=Rha2W) |
 | --- | --- | --- |
 | 0 | 0 | 1 |
 | 1 | 0 | 1 |
@@ -289,7 +292,7 @@ plt.show()
 
 > 或门：或门是“只要有一个输入信号是1，输出就为1”的逻辑电路。
 
-| $x_1$ | $x_2$ | $y$ |
+| ![](https://cdn.nlark.com/yuque/__latex/0e8831d88c93179dbe6c8b5e3678ca20.svg#card=math&code=x_1&id=ZQxqx) | ![](https://cdn.nlark.com/yuque/__latex/b526050a1759d2db5c1ae7e883a48312.svg#card=math&code=x_2&id=c8kdd) | ![](https://cdn.nlark.com/yuque/__latex/947eb82adf8e060dd9e14a2ced68c45a.svg#card=math&code=y%0A&id=dRINF) |
 | --- | --- | --- |
 | 0 | 0 | 0 |
 | 1 | 0 | 1 |
@@ -317,7 +320,7 @@ print(AND(1,1)) # 输出1
 ```
 定义一个接收参数x1和x2的AND函数，在函数内初始化参数w1, w2, theta，当输入的加权总和超过阈值时返回1，否则返回0。
 
-将 θ 换成 -b ，改写数学公式：<br />$y= \begin{cases}0 \quad (b+w_1x_1 + w_2x_2\le0)\\ 1\quad (b+w_1x_1+w_2x_2>0)\end{cases}$,此处，b称为**偏置**，w1和w2称为**权重**。<br />感知机会计算输入信号和权重的乘积，然后加上偏置，如果这个值大于0则输出1，否则输出0。使用NumPy逐一确认结果。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1681458245530-4e527aac-d5b0-4ef4-815b-04498c6f7ac9.png#averageHue=%231b1b1b&clientId=u21cf038b-070e-4&from=paste&height=230&id=u32b8a377&originHeight=287&originWidth=323&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=14235&status=done&style=none&taskId=u4efd5878-b72b-4457-9aca-bfc566e3d57&title=&width=258.4)<br />在NumPy数组的乘法运算中，当两个数组的元素个数相同时，各个元素分别相乘，因此`w*x`的结果就是它们的各个元素分别相乘（[0, 1] * [0.5, 0.5] => [0, 0.5]）。之后，`np.sum(w*x)`再计算相乘后的各个元素的总和。最后再把偏置加到这个加权总和上。
+将 θ 换成 -b ，改写数学公式：<br />![](https://cdn.nlark.com/yuque/__latex/801b525f01e66b7bdc6abb731efed4d1.svg#card=math&code=y%3D%20%5Cbegin%7Bcases%7D0%20%5Cquad%20%28b%2Bw_1x_1%20%2B%20w_2x_2%5Cle0%29%5C%5C%201%5Cquad%20%28b%2Bw_1x_1%2Bw_2x_2%3E0%29%5Cend%7Bcases%7D&id=WUYmS),此处，b称为**偏置**，w1和w2称为**权重**。<br />感知机会计算输入信号和权重的乘积，然后加上偏置，如果这个值大于0则输出1，否则输出0。使用NumPy逐一确认结果。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1681458245530-4e527aac-d5b0-4ef4-815b-04498c6f7ac9.png#averageHue=%231b1b1b&clientId=u21cf038b-070e-4&from=paste&height=230&id=u32b8a377&originHeight=287&originWidth=323&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=14235&status=done&style=none&taskId=u4efd5878-b72b-4457-9aca-bfc566e3d57&title=&width=258.4)<br />在NumPy数组的乘法运算中，当两个数组的元素个数相同时，各个元素分别相乘，因此`w*x`的结果就是它们的各个元素分别相乘（[0, 1] * [0.5, 0.5] => [0, 0.5]）。之后，`np.sum(w*x)`再计算相乘后的各个元素的总和。最后再把偏置加到这个加权总和上。
 
 使用权重和偏置实现与门逻辑电路
 ```python
@@ -389,7 +392,7 @@ if __name__ == '__main__':
 ## 2.4 感知机的局限性
 > 异或门：异或门也被称为逻辑异或电路，仅当x1或x2中的一方为1时，才会输出1（“异或”是拒绝其他的意思）。
 
-| $x_1$ | $x_2$ | $y$ |
+| ![](https://cdn.nlark.com/yuque/__latex/0e8831d88c93179dbe6c8b5e3678ca20.svg#card=math&code=x_1&id=QtMmL) | ![](https://cdn.nlark.com/yuque/__latex/b526050a1759d2db5c1ae7e883a48312.svg#card=math&code=x_2&id=lFtGD) | ![](https://cdn.nlark.com/yuque/__latex/947eb82adf8e060dd9e14a2ced68c45a.svg#card=math&code=y%0A&id=Z9G2O) |
 | --- | --- | --- |
 | 0 | 0 | 0 |
 | 1 | 0 | 1 |
@@ -401,7 +404,7 @@ if __name__ == '__main__':
 ## 2.5 多层感知机
 通过已有门电路的组合：<br />异或门的制作方法有很多，其中之一就是组合我们前面做好的与门、与非门、或门进行配置。与门，与非门，或门用如下图的符号表示<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1681472867117-0a56e39e-d4f8-4f59-8e22-04e15c093b6a.png#averageHue=%23414141&clientId=u21cf038b-070e-4&from=paste&height=167&id=ue80250b0&originHeight=209&originWidth=906&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=16198&status=done&style=none&taskId=ud6112002-d08f-405b-ae78-95dc944dd28&title=&width=724.8)<br />通过组合感知机（叠加层）就可以实现异或门。异或门可以通过如下所示配置来实现，这里，x1和x2表示输入信号，y表示输出信号，x1和x2是与非门和或门的输入，而与非门和或门的输出则是与门的输入。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1681473004376-abd7ade6-d849-4a66-81fb-5bc2fc6adc8c.png#averageHue=%23414141&clientId=u21cf038b-070e-4&from=paste&height=193&id=u01e5cafb&originHeight=241&originWidth=701&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=20588&status=done&style=none&taskId=u605abcec-265e-4d61-982f-8d0f5264084&title=&width=560.8)<br />验证正确性，把s1作为与非门的输出，把s2作为或门的输出，填入真值表
 
-| $x_1$ | $x_2$ | $s_1$ | $s_2$ | $y$ |
+| ![](https://cdn.nlark.com/yuque/__latex/0e8831d88c93179dbe6c8b5e3678ca20.svg#card=math&code=x_1&id=LGOAi) | ![](https://cdn.nlark.com/yuque/__latex/b526050a1759d2db5c1ae7e883a48312.svg#card=math&code=x_2&id=YzGbC) | ![](https://cdn.nlark.com/yuque/__latex/ca3cc99a77092b4a870a2ed346911759.svg#card=math&code=s_1&id=HfXlR) | ![](https://cdn.nlark.com/yuque/__latex/1ec65b375dec2920064daf545cb0476a.svg#card=math&code=s_2&id=ZauFg) | ![](https://cdn.nlark.com/yuque/__latex/947eb82adf8e060dd9e14a2ced68c45a.svg#card=math&code=y%0A&id=naEwl) |
 | --- | --- | --- | --- | --- |
 | 0 | 0 | 1 | 0 | 0 |
 | 1 | 0 | 1 | 1 | 1 |
@@ -441,7 +444,7 @@ if __name__ == '__main__':
 ## 3.1 从感知机到神经网络
 如下图所示，把最左边的一列称为**输入层**，最右边的一列称为**输出层**，中间的一列称为**中间层**。中间层有时候也被称为隐藏层。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1681561346694-117eab84-9dbd-4db3-8220-3d159886a29d.png#averageHue=%23424242&clientId=u664bfb51-2e30-4&from=paste&height=594&id=ue568955d&originHeight=742&originWidth=921&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=89516&status=done&style=none&taskId=u60bc8de4-886e-4cb5-8ac4-108055ab60e&title=&width=736.8)
 
-简化感知机数学式：$y=h(b+w_1x_1+w_2x_2)$，我们用一个函数来表示这种分情况的动作（超过0则输出1，否则输出0）。<br />$h(x) = \begin{cases} 0 \quad (x \le 0) \\ 1 \quad (x>0)\end{cases}$<br />输入信号的总和会被函数h(x)转换，转换后的值就是输出y。h（x）函数会将输入信号的总和转换为输出信号，这种函数一般称为激活函数（activation function）。其作用在于决定如何来激活输入信号的总和。<br />进一步来改进上式：<br />$(1) \quad a = b + w_1x_1 + w_2x_2$<br />$(2) \quad y = h(x)$<br />首先，式（1）计算加权输入信号和偏置的总和，记为a。然后，式（2）用h()函数将a转换为输出y。下图为明确显示激活函数的计算过程。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1681562541410-54919415-68b7-42d2-9f18-249e7b918385.png#averageHue=%23424242&clientId=u664bfb51-2e30-4&from=paste&height=307&id=u6f8e6ecf&originHeight=613&originWidth=689&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=43209&status=done&style=none&taskId=u07b64979-c9bc-4e91-bfb8-0c8817a31cd&title=&width=345)信号的加权总和为节点a，然后节点a被激活函数h()转换成节点y。
+简化感知机数学式：![](https://cdn.nlark.com/yuque/__latex/8fc00128696670950893256c60f16a21.svg#card=math&code=y%3Dh%28b%2Bw_1x_1%2Bw_2x_2%29&id=G7WZT)，我们用一个函数来表示这种分情况的动作（超过0则输出1，否则输出0）。<br />![](https://cdn.nlark.com/yuque/__latex/ce5f91ff43c8c12fcb79e91caf39a7ab.svg#card=math&code=h%28x%29%20%3D%20%5Cbegin%7Bcases%7D%200%20%5Cquad%20%28x%20%5Cle%200%29%20%5C%5C%201%20%5Cquad%20%28x%3E0%29%5Cend%7Bcases%7D&id=GoWvF)<br />输入信号的总和会被函数h(x)转换，转换后的值就是输出y。h（x）函数会将输入信号的总和转换为输出信号，这种函数一般称为激活函数（activation function）。其作用在于决定如何来激活输入信号的总和。<br />进一步来改进上式：<br />![](https://cdn.nlark.com/yuque/__latex/c0f2fc874d8df61947b105ef97705458.svg#card=math&code=%281%29%20%5Cquad%20a%20%3D%20b%20%2B%20w_1x_1%20%2B%20w_2x_2%20%0A&id=OLjcb)<br />![](https://cdn.nlark.com/yuque/__latex/ef7e54eae38bcb740b79e4a7f316c7f2.svg#card=math&code=%282%29%20%5Cquad%20y%20%3D%20h%28x%29%0A&id=zPld6)<br />首先，式（1）计算加权输入信号和偏置的总和，记为a。然后，式（2）用h()函数将a转换为输出y。下图为明确显示激活函数的计算过程。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1681562541410-54919415-68b7-42d2-9f18-249e7b918385.png#averageHue=%23424242&clientId=u664bfb51-2e30-4&from=paste&height=307&id=u6f8e6ecf&originHeight=613&originWidth=689&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=43209&status=done&style=none&taskId=u07b64979-c9bc-4e91-bfb8-0c8817a31cd&title=&width=345)信号的加权总和为节点a，然后节点a被激活函数h()转换成节点y。
 
 ![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1681562849199-b81a45ea-bca0-42c8-b842-b840280fb2f5.png#averageHue=%23414141&clientId=u664bfb51-2e30-4&from=paste&height=238&id=u0c9793c0&originHeight=298&originWidth=1316&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=38865&status=done&style=none&taskId=uc31b44f3-42b7-4582-8c50-cf0603cb52f&title=&width=1052.8)<br />左图是一般的神经元的图，右图是在神经元内部明确显示激活函数的计算过程的图（a表示输入信号的总和，h()表示激活函数，y表示输出）
 
@@ -452,7 +455,7 @@ if __name__ == '__main__':
 
 因此，可以说感知机中使用了阶跃函数作为激活函数。也就是说，在激活函数的众多候选函数中，感知机使用了阶跃函数。
 ### 3.2.1 sigmoid函数
-神经网络中经常使用的一个激活函数就是sigmoid函数：$h(x) = \frac{1}{1+e^{-x}}$。神经网络中用sigmoid函数作为激活函数，进行信号的转换，转换后的信号被传送给下一个神经元。神经元的多层<br />连接的构造、信号的传递方法等，基本上和感知机是一样的。
+神经网络中经常使用的一个激活函数就是sigmoid函数：![](https://cdn.nlark.com/yuque/__latex/1be52342616f44d85f79cc919cbc5401.svg#card=math&code=h%28x%29%20%3D%20%5Cfrac%7B1%7D%7B1%2Be%5E%7B-x%7D%7D&id=ANbZM)。神经网络中用sigmoid函数作为激活函数，进行信号的转换，转换后的信号被传送给下一个神经元。神经元的多层<br />连接的构造、信号的传递方法等，基本上和感知机是一样的。
 
 ### 3.2.2 阶跃函数的实现与图像
 当输入超过0时，输出1，否则输出0。可以像下面这样简单地实现阶跃函数。
@@ -547,7 +550,7 @@ plt.show()
 ### 3.2.5 ReLU函数
 > ReLU函数在输入大于0时，直接输出该值；在输入小于等于0时，输出0
 
-ReLU函数可以标识为下面的式子。<br />$h(x) = \begin{cases} x \quad (x > 0) \\ 0 \quad (x \le 0) \end{cases}$<br />ReLU函数可用如下代码实现。
+ReLU函数可以标识为下面的式子。<br />![](https://cdn.nlark.com/yuque/__latex/6cec56607874f29ef62dc3fe9f0670b1.svg#card=math&code=h%28x%29%20%3D%20%5Cbegin%7Bcases%7D%20x%20%5Cquad%20%28x%20%3E%200%29%20%5C%5C%200%20%5Cquad%20%28x%20%5Cle%200%29%20%5Cend%7Bcases%7D&id=p11G9)<br />ReLU函数可用如下代码实现。
 ```python
 def relu(x):
     return np.maximum(0,x)
@@ -573,10 +576,10 @@ maximum函数会从输入的数值中选择较大的那个值进行输出。ReLU
 3层神经网络示意图<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1681718849833-835a8ff6-5e78-4e74-b979-244ac9ec3a9e.png#averageHue=%23424242&clientId=u05e7a439-d16b-4&from=paste&height=349&id=ub68b167d&originHeight=436&originWidth=843&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=58696&status=done&style=none&taskId=ue9602726-24da-4a04-a051-0607c21680c&title=&width=674.4)<br />输入层有2个神经元，第1个隐藏层有3个神经元，第2个隐藏层有2个神经元，输出层有2个神经元
 
 ### 3.4.1 符号确认
-权重符号如下<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1681719977951-16438890-0340-4ff1-808d-51617a665b8b.png#averageHue=%23414141&clientId=u05e7a439-d16b-4&from=paste&height=307&id=ufa409226&originHeight=384&originWidth=830&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=50531&status=done&style=none&taskId=u1428a267-6e8d-48c9-bb10-9e9ae8a31a6&title=&width=664)<br />权重和隐藏层的神经元的右上角有一个“(1)”，表示权重和神经元的层号（即第1层的权重、第1层的神经元）。此外，权重的右下角有两个数字，它们是后一层的神经元和前一层的神经元的索引号。$w_{12}^{(1)}$表示前一层的第2个神经元$x_2$到后一层的第1个神经元$a_1^{(1)}$的权重。权重右下角按照“后一层的索引号、前一层的索引号”的顺序排列。
+权重符号如下<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1681719977951-16438890-0340-4ff1-808d-51617a665b8b.png#averageHue=%23414141&clientId=u05e7a439-d16b-4&from=paste&height=307&id=ufa409226&originHeight=384&originWidth=830&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=50531&status=done&style=none&taskId=u1428a267-6e8d-48c9-bb10-9e9ae8a31a6&title=&width=664)<br />权重和隐藏层的神经元的右上角有一个“(1)”，表示权重和神经元的层号（即第1层的权重、第1层的神经元）。此外，权重的右下角有两个数字，它们是后一层的神经元和前一层的神经元的索引号。![](https://cdn.nlark.com/yuque/__latex/08c3265a2052ba6be0de989d959b7eff.svg#card=math&code=w_%7B12%7D%5E%7B%281%29%7D&id=spxxh)表示前一层的第2个神经元![](https://cdn.nlark.com/yuque/__latex/9929b4550bf80849e3bbd9bdace8be77.svg#card=math&code=x_2%0A&id=FIRSh)到后一层的第1个神经元![](https://cdn.nlark.com/yuque/__latex/8e3351610d813c64e18b3c901bafc333.svg#card=math&code=a_1%5E%7B%281%29%7D&id=nxfxC)的权重。权重右下角按照“后一层的索引号、前一层的索引号”的顺序排列。
 
 ### 3.4.2 各层间信号传递的实现
-下面是输入层到第1层的第一个神经元的信号传递过程<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1681720475570-d9853296-24ca-46af-bc82-72792b2d10f2.png#averageHue=%23424242&clientId=u05e7a439-d16b-4&from=paste&height=419&id=ue9118699&originHeight=524&originWidth=860&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=90058&status=done&style=none&taskId=u30f68141-080c-407c-8406-fa898e751bb&title=&width=688)<br />上图中增加了表示偏置的神经元“1”。偏置的右下角的索引号只有一个，因为前一层的偏置神经元只有一个。<br />下面用数学式表示$a_1^{(1)}$通过加权信号和偏置的和按如下方式进行计算：$a_1^{(1)} = w_{11}^{1}x_1 + w_{12}^{(1)}x_2 + b_1^{(1)}$。此外，如果使用矩阵的乘法运算，则可以将第1层的加权表示成下面的式子：$\bm {A}^{(1)} = \bm{XW}^{(1)} + \bm{B}^{(1)}$，其中各元素如下所示<br />$\bm{A}^{(1)} = \begin{pmatrix}a_1^{(1)} & a_2^{(1)} & a_3^{(1)}\end{pmatrix}，\bm{X} = \begin{pmatrix} x_1 & x_2 \end{pmatrix}，\bm{B}^{(1)}=\begin{pmatrix} b_1^{(1)} & b_2^{(1)} & b_3^{(1)} \end{pmatrix}，W^{(1)} = \begin{pmatrix} w_{11}^{(1)} &w_{21}^{(1)} & w_{31}^{(1)} \\ w_{12}^{(1)} &w_{22}^{(1)} & w_{32}^{(1)}\end{pmatrix}$
+下面是输入层到第1层的第一个神经元的信号传递过程<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1681720475570-d9853296-24ca-46af-bc82-72792b2d10f2.png#averageHue=%23424242&clientId=u05e7a439-d16b-4&from=paste&height=419&id=ue9118699&originHeight=524&originWidth=860&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=90058&status=done&style=none&taskId=u30f68141-080c-407c-8406-fa898e751bb&title=&width=688)<br />上图中增加了表示偏置的神经元“1”。偏置的右下角的索引号只有一个，因为前一层的偏置神经元只有一个。<br />下面用数学式表示![](https://cdn.nlark.com/yuque/__latex/8e3351610d813c64e18b3c901bafc333.svg#card=math&code=a_1%5E%7B%281%29%7D&id=yagQ5)通过加权信号和偏置的和按如下方式进行计算：![](https://cdn.nlark.com/yuque/__latex/c77460825d40735a9a69fb0a277be610.svg#card=math&code=a_1%5E%7B%281%29%7D%20%3D%20w_%7B11%7D%5E%7B1%7Dx_1%20%2B%20w_%7B12%7D%5E%7B%281%29%7Dx_2%20%2B%20b_1%5E%7B%281%29%7D%0A&id=YXvL6)。此外，如果使用矩阵的乘法运算，则可以将第1层的加权表示成下面的式子：![](https://cdn.nlark.com/yuque/__latex/25e7c3556ab706b9587766023a7ee384.svg#card=math&code=%5Cbm%20%7BA%7D%5E%7B%281%29%7D%20%3D%20%5Cbm%7BXW%7D%5E%7B%281%29%7D%20%2B%20%5Cbm%7BB%7D%5E%7B%281%29%7D&id=Ir6RH)，其中各元素如下所示<br />![](https://cdn.nlark.com/yuque/__latex/3f100ca5bf0cb8a5bae7dadc67adcd1d.svg#card=math&code=%5Cbm%7BA%7D%5E%7B%281%29%7D%20%3D%20%5Cbegin%7Bpmatrix%7Da_1%5E%7B%281%29%7D%20%26%20a_2%5E%7B%281%29%7D%20%26%20a_3%5E%7B%281%29%7D%5Cend%7Bpmatrix%7D%EF%BC%8C%5Cbm%7BX%7D%20%3D%20%5Cbegin%7Bpmatrix%7D%20x_1%20%26%20x_2%20%5Cend%7Bpmatrix%7D%EF%BC%8C%5Cbm%7BB%7D%5E%7B%281%29%7D%3D%5Cbegin%7Bpmatrix%7D%20b_1%5E%7B%281%29%7D%20%26%20b_2%5E%7B%281%29%7D%20%26%20b_3%5E%7B%281%29%7D%20%5Cend%7Bpmatrix%7D%EF%BC%8CW%5E%7B%281%29%7D%20%3D%20%5Cbegin%7Bpmatrix%7D%20w_%7B11%7D%5E%7B%281%29%7D%20%26w_%7B21%7D%5E%7B%281%29%7D%20%26%20w_%7B31%7D%5E%7B%281%29%7D%20%5C%5C%20w_%7B12%7D%5E%7B%281%29%7D%20%26w_%7B22%7D%5E%7B%281%29%7D%20%26%20w_%7B32%7D%5E%7B%281%29%7D%5Cend%7Bpmatrix%7D&id=ogM9q)
 
 下面来用NumPy多维数组实现上面矩阵的乘法运算。（将输入信号、权重、偏置设置成任意值）
 ```python
@@ -665,7 +668,7 @@ print(y) # [0.31682708  0.69627909]
 
 ![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1681735934458-b2cd7956-824d-4541-9c3a-a88ee9095782.png#averageHue=%23414141&clientId=u05e7a439-d16b-4&from=paste&height=224&id=ud3f43a09&originHeight=280&originWidth=359&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=18699&status=done&style=none&taskId=u3ff15381-92bf-44bb-a205-44776367db3&title=&width=287.2)
 
-分类问题中使用的softmax函数可以用下面的数学式表示。<br />$y_k = \frac{e^{a_k}}{\sum_{i=1}^ne^{a_i}}$<br />这个式子表示假设输出层共有n个神经元，计算第k个神经元的输出$y_k$。分子是输入信号$a_k$的指数函数，分母是所有输入信号的指数函数的和。softmax函数的图示如下。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1681736253756-5d6e7f44-0786-4110-8295-74d023641600.png#averageHue=%23424242&clientId=u05e7a439-d16b-4&from=paste&height=225&id=u1bb2d82b&originHeight=281&originWidth=295&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=24835&status=done&style=none&taskId=u8af574ca-7cec-4c2f-8a56-8e5df98d5fb&title=&width=236)<br />softmax函数的输出通过箭头与所有的输入信号相连。从上面的数学式可以看出，输出层的各个神经元都受到所有输入信号的影响。
+分类问题中使用的softmax函数可以用下面的数学式表示。<br />![](https://cdn.nlark.com/yuque/__latex/0134ce5b3fbc81c86adc88f5c68176b4.svg#card=math&code=y_k%20%3D%20%5Cfrac%7Be%5E%7Ba_k%7D%7D%7B%5Csum_%7Bi%3D1%7D%5Ene%5E%7Ba_i%7D%7D&id=rAlb0)<br />这个式子表示假设输出层共有n个神经元，计算第k个神经元的输出![](https://cdn.nlark.com/yuque/__latex/48e6989aee378b0671dcbc11187f8dd6.svg#card=math&code=y_k&id=LP6cI)。分子是输入信号![](https://cdn.nlark.com/yuque/__latex/eb1130b86c0023f2fc1466c5f4664eb9.svg#card=math&code=a_k&id=t4PXG)的指数函数，分母是所有输入信号的指数函数的和。softmax函数的图示如下。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1681736253756-5d6e7f44-0786-4110-8295-74d023641600.png#averageHue=%23424242&clientId=u05e7a439-d16b-4&from=paste&height=225&id=u1bb2d82b&originHeight=281&originWidth=295&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=24835&status=done&style=none&taskId=u8af574ca-7cec-4c2f-8a56-8e5df98d5fb&title=&width=236)<br />softmax函数的输出通过箭头与所有的输入信号相连。从上面的数学式可以看出，输出层的各个神经元都受到所有输入信号的影响。
 
 用Python解释器实现softmax函数如下。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1681736653152-203f8efc-7a75-4824-9c75-2b02a03a99e0.png#averageHue=%23373b43&clientId=u05e7a439-d16b-4&from=paste&height=236&id=u841780ba&originHeight=295&originWidth=464&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=27633&status=done&style=none&taskId=ub3278667-81bf-4c75-a14f-15eacb9af39&title=&width=371.2)<br />将其封装为`softmax()`函数。
 ```python
@@ -677,7 +680,7 @@ def softmax(a):
 ```
 
 ### 3.5.2 实现softmax函数时的注意事项
-为了防止指数计算时的溢出，softmax函数的实现可以如下改进。<br />$y_k = \frac{e^{a_k}}{\sum_{i=1}^ne^{a_i}} = \frac{Ce^{a_k}}{C\sum_{i=1}^ne^{a_i}} = \frac{e^{a_k+lnC}}{\sum_{i=1}^ne^{a_i+lnC}} = \frac{e^{a_k+C'}}{\sum_{i=1}^ne^{a_i+C'}}(其中，C'=lnC)$
+为了防止指数计算时的溢出，softmax函数的实现可以如下改进。<br />![](https://cdn.nlark.com/yuque/__latex/d2ef4ae5f3b96de651302b78138bfba3.svg#card=math&code=y_k%20%3D%20%5Cfrac%7Be%5E%7Ba_k%7D%7D%7B%5Csum_%7Bi%3D1%7D%5Ene%5E%7Ba_i%7D%7D%20%3D%20%5Cfrac%7BCe%5E%7Ba_k%7D%7D%7BC%5Csum_%7Bi%3D1%7D%5Ene%5E%7Ba_i%7D%7D%20%3D%20%5Cfrac%7Be%5E%7Ba_k%2BlnC%7D%7D%7B%5Csum_%7Bi%3D1%7D%5Ene%5E%7Ba_i%2BlnC%7D%7D%20%3D%20%5Cfrac%7Be%5E%7Ba_k%2BC%27%7D%7D%7B%5Csum_%7Bi%3D1%7D%5Ene%5E%7Ba_i%2BC%27%7D%7D%28%E5%85%B6%E4%B8%AD%EF%BC%8CC%27%3DlnC%29&id=qNFH8)
 
 这里的`C'`可以使用任何值，但是为了防止溢出，一般会使用输入信号中的最大值。具体实例如下。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1681737161062-116991db-71ec-475a-a3dc-28c978f761db.png#averageHue=%23343840&clientId=u05e7a439-d16b-4&from=paste&height=214&id=u50e56a02&originHeight=267&originWidth=831&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=30728&status=done&style=none&taskId=u61af6bc7-eb73-434e-aab0-04cae6a74f1&title=&width=664.8)<br />如该例所示，通过减去输入信号中的最大值（上例中的c），我们发现原本为nan（not a number，不确定）的地方，现在被正确计算了。综上，softmax函数可以优化如下。
 ```python
@@ -889,7 +892,7 @@ print("Accuracy: "+str(float(accuracy_cnt) / len(x)))
 
 
 ### 4.2.1 均方误差
-均方误差（mean squared error）如下式所示。<br />$E = \frac{1}{2}\sum_k(y_k-t_k)^2$<br />在这里，$y_k$是表示神经网络的输出，$t_k$表示监督数据，k表示数据的维数。均方误差会计算神经网络的输出和正确解监督数据的各个元素之差的平方，再求总和。下面用Python实现均方误差。
+均方误差（mean squared error）如下式所示。<br />![](https://cdn.nlark.com/yuque/__latex/fb2e6d20d833b215ddd11b8e594d10a3.svg#card=math&code=E%20%3D%20%5Cfrac%7B1%7D%7B2%7D%5Csum_k%28y_k-t_k%29%5E2&id=VV4yq)<br />在这里，![](https://cdn.nlark.com/yuque/__latex/48e6989aee378b0671dcbc11187f8dd6.svg#card=math&code=y_k&id=lvWsl)是表示神经网络的输出，![](https://cdn.nlark.com/yuque/__latex/a53f422097657e8d1a469427a6ef2fe4.svg#card=math&code=t_k&id=TFjCJ)表示监督数据，k表示数据的维数。均方误差会计算神经网络的输出和正确解监督数据的各个元素之差的平方，再求总和。下面用Python实现均方误差。
 ```python
 def mean_squared_error(y, t):
     return 0.5 * np.sum((y-t)**2)
@@ -897,7 +900,7 @@ def mean_squared_error(y, t):
 这里参数 y 和 t 是NumPy数组。
 
 ### 4.2.2 交叉熵误差
-交叉熵误差（cross entropy error）如下式所示。<br />$E = -\sum_kt_klny_k$<br />这里，ln表示以e为敌的自然对数，$y_k$是神经网络输出，$t_k$是正确解标签。并且，$t_k$中只有正确解标签的索引为1，其他均为0。
+交叉熵误差（cross entropy error）如下式所示。<br />![](https://cdn.nlark.com/yuque/__latex/d230036acf9be5da1b6dd33a36fb1aff.svg#card=math&code=E%20%3D%20-%5Csum_kt_klny_k&id=WU60Y)<br />这里，ln表示以e为敌的自然对数，![](https://cdn.nlark.com/yuque/__latex/48e6989aee378b0671dcbc11187f8dd6.svg#card=math&code=y_k&id=bSF3E)是神经网络输出，![](https://cdn.nlark.com/yuque/__latex/a53f422097657e8d1a469427a6ef2fe4.svg#card=math&code=t_k&id=AimMJ)是正确解标签。并且，![](https://cdn.nlark.com/yuque/__latex/a53f422097657e8d1a469427a6ef2fe4.svg#card=math&code=t_k&id=pQQaa)中只有正确解标签的索引为1，其他均为0。
 
 因此，交叉熵误差实际上只计算正确解标签的输出的自然对数。也就是说，交叉熵误差的值是由正确解标签所对应的输出结果决定的。<br />自然对数图像如下如所示。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1682041946272-e35499c8-1b16-49ba-8e80-f69d8ee6dee4.png#averageHue=%23fcfcfc&clientId=u3bfb9bac-dc34-4&from=paste&height=480&id=u0668b88f&originHeight=600&originWidth=800&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=18983&status=done&style=none&taskId=u902c5ef3-bd76-4a6a-9a67-8eab603bbdf&title=&width=640)<br />x等于1时，y为0；随着x向0靠近，y逐渐变小。因此正确解标签对应的输出越大，CEE的值越接近0；当输出为1时，CEE为0。下面用Python实现交叉熵误差。
 ```python
@@ -910,7 +913,7 @@ def cross_entropy_error(y, t):
 使用`cross_entropy_error(y, t)`进行一些简单的计算<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1682044355295-44486e4f-b0b6-484a-ab7d-67a86408e6f7.png#averageHue=%2332363e&clientId=u3bfb9bac-dc34-4&from=paste&height=344&id=udfe6465d&originHeight=430&originWidth=841&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=42271&status=done&style=none&taskId=u189e2927-b556-4d1d-8654-ad2ef4d17ff&title=&width=672.8)<br />第一个例子中，正确解标签对应的输出为0.6，此时交叉熵误差大约为0.51。第二个例子中，正确解标签对应的输出为0.1的低值，此时的交叉熵误差大约为2.3。
 
 ### 4.2.3 mini-batch学习
-所有训练数据损失函数的总和，以交叉熵误差为例，可以写成下面的式子。<br />$E = -\frac{1}{N}\sum_n\sum_kt_{nk}lny_{nk}$<br />这里，假设数据有N个，$t_{nk}$表示第 n 个数据的第 k 个元素的值（$y_{nk}$是神经网络的输出，$t_{nk}$是监督数据）。
+所有训练数据损失函数的总和，以交叉熵误差为例，可以写成下面的式子。<br />![](https://cdn.nlark.com/yuque/__latex/3575c5274d7db760988043b84d24792c.svg#card=math&code=E%20%3D%20-%5Cfrac%7B1%7D%7BN%7D%5Csum_n%5Csum_kt_%7Bnk%7Dlny_%7Bnk%7D&id=aJlS3)<br />这里，假设数据有N个，![](https://cdn.nlark.com/yuque/__latex/285f0cdbe031a4f7e44332ccda355f94.svg#card=math&code=t_%7Bnk%7D&id=x3Iua)表示第 n 个数据的第 k 个元素的值（![](https://cdn.nlark.com/yuque/__latex/3588824c2810f242b22a9536d98a2d2b.svg#card=math&code=y_%7Bnk%7D&id=q9jUM)是神经网络的输出，![](https://cdn.nlark.com/yuque/__latex/285f0cdbe031a4f7e44332ccda355f94.svg#card=math&code=t_%7Bnk%7D&id=LkfCN)是监督数据）。
 
 神经网络的学习也是从训练数据中选出一批数据（称为mini-batch，小批量），然后对每个mini-batch进行学习。
 
@@ -974,7 +977,7 @@ def numerical_diff(f,x):
 ```
 
 ### 4.3.2 数值微分的例子
-尝试用数值微分对简单函数进行求导。<br />$y=0.01x^2+0.1x$<br />用Python实现上式。
+尝试用数值微分对简单函数进行求导。<br />![](https://cdn.nlark.com/yuque/__latex/b385dfc9d0465063c27d9d1d49e373b4.svg#card=math&code=y%3D0.01x%5E2%2B0.1x&id=A9wa6)<br />用Python实现上式。
 ```python
 def function_1(x):
     return 0.01 * x ** 2 + 0.1 * x
@@ -1035,7 +1038,7 @@ plt.show()
 x=5处的切线如下<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1682065463885-63e55d0e-89df-498a-a85d-eab0b74e63d2.png#averageHue=%23fcfcfb&clientId=uc6be4a61-1f40-4&from=paste&height=480&id=uaf7b73c5&originHeight=600&originWidth=800&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=27844&status=done&style=none&taskId=u9a56b707-5ac6-4de7-a399-a0e4e9141c4&title=&width=640)
 
 ### 4.3.3 偏导数
-如下一个函数，有两个变量。<br />$f(x_0,x_1) = x_0^2+x_1^2$<br />用Python实现如下。
+如下一个函数，有两个变量。<br />![](https://cdn.nlark.com/yuque/__latex/d40c8e25200796ee3e5d872374b72528.svg#card=math&code=f%28x_0%2Cx_1%29%20%3D%20x_0%5E2%2Bx_1%5E2&id=WWued)<br />用Python实现如下。
 ```python
 def function_2(x):
     return x[0] ** 2 + x[1] ** 2
@@ -1047,7 +1050,7 @@ def function_2(x):
 求偏导数<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1682066162084-9c39604d-c0cf-4a2c-a2dc-8993901259ef.png#averageHue=%23414141&clientId=uc6be4a61-1f40-4&from=paste&height=366&id=ub8b83a22&originHeight=457&originWidth=612&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=66679&status=done&style=none&taskId=u82c2e35a-3609-4c31-bdd0-ca11a0accc6&title=&width=489.6)<br />偏导数和单变量的导数一样，都是求某个地方的斜率。偏导数需要将多个变量中的某一个变量定为目标变量，并将其他变量固定为某个值。
 
 ## 4.4 梯度
-> 像$(\frac{\partial f}{\partial x_0}, \frac{\partial f}{\partial x_1})$这样由全部变量的偏导数汇总而成的向量称为梯度（gradient）
+> 像![](https://cdn.nlark.com/yuque/__latex/5344300fcb7e4e996670140397506570.svg#card=math&code=%28%5Cfrac%7B%5Cpartial%20f%7D%7B%5Cpartial%20x_0%7D%2C%20%5Cfrac%7B%5Cpartial%20f%7D%7B%5Cpartial%20x_1%7D%29&id=pfAZZ)这样由全部变量的偏导数汇总而成的向量称为梯度（gradient）
 
 梯度可以像下面这样实现。
 ```python
@@ -1073,7 +1076,7 @@ def numerical_gradient(f,x):
 ```
 函数`numerical_gradient(f, x)`中，参数`f`为函数，`x`为NumPy数组，该函数对NumPy数组`x`的各个元素求数值微分。
 
-把$f(x_0,x_1) = x_0^2+x_1^2$的梯度画在图上。
+把![](https://cdn.nlark.com/yuque/__latex/d40c8e25200796ee3e5d872374b72528.svg#card=math&code=f%28x_0%2Cx_1%29%20%3D%20x_0%5E2%2Bx_1%5E2&id=HLKMt)的梯度画在图上。
 ```python
 import numpy as np
 import matplotlib.pylab as plt
@@ -1153,7 +1156,7 @@ if __name__ == '__main__':
 
 这里的梯度表示的是各点处的函数值减小最多的方向。寻找最小值的梯度法称为梯度下降法（gradient descent method），<br />寻找最大值的梯度法称为梯度上升法（gradient ascent method）。
 
-下面用数学式来表示梯度法。<br />$x_0 = x_0 - \eta\frac{\partial f}{\partial x_0} \quad x_1=x_1-\eta\frac{\partial f}{\partial x_1}$<br />上式中，$\eta$表示更新量，在神经网络的学习中，称为学习率（learning rate）。学习率决定在一次学习中，应该学习多少，以及在多大程度上更新参数。
+下面用数学式来表示梯度法。<br />![](https://cdn.nlark.com/yuque/__latex/5cecbce9f0330b69f8ad835c8f7af65e.svg#card=math&code=x_0%20%3D%20x_0%20-%20%5Ceta%5Cfrac%7B%5Cpartial%20f%7D%7B%5Cpartial%20x_0%7D%20%5Cquad%20x_1%3Dx_1-%5Ceta%5Cfrac%7B%5Cpartial%20f%7D%7B%5Cpartial%20x_1%7D&id=qYYT5)<br />上式中，![](https://cdn.nlark.com/yuque/__latex/96b0657b0bd8ddf567b3f27d8ad467e6.svg#card=math&code=%5Ceta%0A&id=KwB2K)表示更新量，在神经网络的学习中，称为学习率（learning rate）。学习率决定在一次学习中，应该学习多少，以及在多大程度上更新参数。
 
 用Python实现梯度下降法
 ```python
@@ -1172,7 +1175,7 @@ def gradient_descent(f, init_x, lr = 0.01, step_num = 100):
 ```
 参数`f`是要进行最优化的函数，`init_x`是初始值，`lr`是学习率learning rate，`step_num`是梯度法的重复次数。`numerical_gradient(f,x)`会求函数的梯度，用该梯度乘以学习率得到的值进行更新操作，由`step_num`指定重复的次数。
 
-下面用梯度法求函数$f(x_0+x_1) = x_0^2+x_1^2$的最小值
+下面用梯度法求函数![](https://cdn.nlark.com/yuque/__latex/c0983a6809880f591e5e1dfa55306a5b.svg#card=math&code=f%28x_0%2Bx_1%29%20%3D%20x_0%5E2%2Bx_1%5E2&id=CZcCn)的最小值
 ```python
 import numpy as np
 import matplotlib.pylab as plt
@@ -1217,7 +1220,7 @@ plt.show()
 ### 4.4.2 神经网络的梯度
 > 神经网络的学习也要求梯度。这里所说的梯度是指损失函数关于权重参数的梯度。
 
-比如，有一个只有一个形状为 2 × 3 的权重 W 的神经网络，损失函数用 L 表示。此时，梯度可以用$\frac{\partial L}{\partial W}$表示。数学式如下。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1682077691375-f35f6560-958b-4f4f-b60a-c611e1107d44.png#averageHue=%23414141&clientId=u4287f989-f779-4&from=paste&height=149&id=ua5c3a116&originHeight=186&originWidth=392&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=21322&status=done&style=none&taskId=u27eb31d3-56e9-4e52-a495-27b6975e0ea&title=&width=313.6)<br />$\frac{\partial L}{\partial W}$的元素由各个元素关于 W 的偏导数构成。下面以一个简单的神经网络为例，来实现求梯度的代码。
+比如，有一个只有一个形状为 2 × 3 的权重 W 的神经网络，损失函数用 L 表示。此时，梯度可以用![](https://cdn.nlark.com/yuque/__latex/36e5597d13be0b891d1dbb4a7b2f5f0d.svg#card=math&code=%5Cfrac%7B%5Cpartial%20L%7D%7B%5Cpartial%20W%7D&id=RhceS)表示。数学式如下。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1682077691375-f35f6560-958b-4f4f-b60a-c611e1107d44.png#averageHue=%23414141&clientId=u4287f989-f779-4&from=paste&height=149&id=ua5c3a116&originHeight=186&originWidth=392&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=21322&status=done&style=none&taskId=u27eb31d3-56e9-4e52-a495-27b6975e0ea&title=&width=313.6)<br />![](https://cdn.nlark.com/yuque/__latex/36e5597d13be0b891d1dbb4a7b2f5f0d.svg#card=math&code=%5Cfrac%7B%5Cpartial%20L%7D%7B%5Cpartial%20W%7D&id=AgjU9)的元素由各个元素关于 W 的偏导数构成。下面以一个简单的神经网络为例，来实现求梯度的代码。
 ```python
 import sys, os
 sys.path.append("D:\Download\ProgrammingTools\VSCode\CodeWorkSpace\deep-learning-introduction")  # 为了导入父目录的文件而进行的设定
@@ -1525,30 +1528,30 @@ plt.show()
 2. 利用计算图可以将中间的计算结果全部保存起来
 3. 可以通过反向传播高效计算导数
 
-对于上面的问题1，假设我们想知道苹果价格的上涨会在多大程度上影响最终的支付金额，即求“支付金额关于苹果的价格的导数”。设苹果价格为x，支付金额为L，则相当于求$\frac{\partial L}{\partial x}$。这个导数的值表示当苹果的价格稍微上涨时，支付金额会增加多少。<br />“支付金额关于苹果的价格的导数”的值可以通过计算图的反向传播求出来。可以通过计算图的反向传播求导数，具体过程如下图所示。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1682220985618-1ec231fb-cb9a-415b-9737-cb8276896356.png#averageHue=%23424242&clientId=ucd66bb0b-d041-4&from=paste&height=228&id=u451ef698&originHeight=285&originWidth=862&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=37376&status=done&style=none&taskId=ub78b151b-275c-4fe0-9ecc-82fba1f86fc&title=&width=689.6)<br />反向传播使用与正方向相反的箭头（粗线）表示。反向传播传递“局部导数”，将导数的值写在箭头的下方。从这个结果中可知，“支付金额关于苹果的价格的导数”的值是2.2。这意味着，如果苹果的价格上涨1日元，最终的支付金额会增加2.2日元
+对于上面的问题1，假设我们想知道苹果价格的上涨会在多大程度上影响最终的支付金额，即求“支付金额关于苹果的价格的导数”。设苹果价格为x，支付金额为L，则相当于求![](https://cdn.nlark.com/yuque/__latex/e9aacec8b15fc1e9462a4aaf873e6494.svg#card=math&code=%5Cfrac%7B%5Cpartial%20L%7D%7B%5Cpartial%20x%7D&id=Egv8b)。这个导数的值表示当苹果的价格稍微上涨时，支付金额会增加多少。<br />“支付金额关于苹果的价格的导数”的值可以通过计算图的反向传播求出来。可以通过计算图的反向传播求导数，具体过程如下图所示。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1682220985618-1ec231fb-cb9a-415b-9737-cb8276896356.png#averageHue=%23424242&clientId=ucd66bb0b-d041-4&from=paste&height=228&id=u451ef698&originHeight=285&originWidth=862&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=37376&status=done&style=none&taskId=ub78b151b-275c-4fe0-9ecc-82fba1f86fc&title=&width=689.6)<br />反向传播使用与正方向相反的箭头（粗线）表示。反向传播传递“局部导数”，将导数的值写在箭头的下方。从这个结果中可知，“支付金额关于苹果的价格的导数”的值是2.2。这意味着，如果苹果的价格上涨1日元，最终的支付金额会增加2.2日元
 
 计算中途求得的导数的结果（中间传递的导数）可以被共享，从而可以高效地计算多个导数。综上，计算图的优点是，可以通过正向传播和反向传播高效地计算各个变量的导数值。
 
 ## 5.2 链式法则
 ### 5.2.1 计算图的反向传播
-下面是一个使用计算图的反向传播的例子：假设存在 y = f(x) 的计算，这个计算的反向传播如下图所示。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1682236797803-9fc3a4a6-3dc2-456e-bf1a-d63e9b791a68.png#averageHue=%23414141&clientId=ue9c1380f-c053-4&from=paste&height=133&id=u1fd01d03&originHeight=166&originWidth=863&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=8526&status=done&style=none&taskId=u0831afa3-3ec6-4e47-af32-3f1a1483601&title=&width=690.4)<br />如上图所示，反向传播的顺序是，将信号 E 乘以结点的局部导数（$\frac{\partial y}{\partial x}$），然后将结果传递给下一个节点。比如，假设$y = f(x)=x^2$，则局部导数为$\frac{\partial y}{\partial x}=2x$。把这个局部导数乘以上游传过来的值（E），然后传递给前面的节点。
+下面是一个使用计算图的反向传播的例子：假设存在 y = f(x) 的计算，这个计算的反向传播如下图所示。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1682236797803-9fc3a4a6-3dc2-456e-bf1a-d63e9b791a68.png#averageHue=%23414141&clientId=ue9c1380f-c053-4&from=paste&height=133&id=u1fd01d03&originHeight=166&originWidth=863&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=8526&status=done&style=none&taskId=u0831afa3-3ec6-4e47-af32-3f1a1483601&title=&width=690.4)<br />如上图所示，反向传播的顺序是，将信号 E 乘以结点的局部导数（![](https://cdn.nlark.com/yuque/__latex/c98403508ed4f41213e396ea80b4523e.svg#card=math&code=%5Cfrac%7B%5Cpartial%20y%7D%7B%5Cpartial%20x%7D&id=SChaU)），然后将结果传递给下一个节点。比如，假设![](https://cdn.nlark.com/yuque/__latex/59dc7bf9020e8e091817820c213cf062.svg#card=math&code=y%20%3D%20f%28x%29%3Dx%5E2&id=axdRv)，则局部导数为![](https://cdn.nlark.com/yuque/__latex/204c8e7879fad098a56a9c248d896df9.svg#card=math&code=%5Cfrac%7B%5Cpartial%20y%7D%7B%5Cpartial%20x%7D%3D2x&id=foJ7t)。把这个局部导数乘以上游传过来的值（E），然后传递给前面的节点。
 
 ### 5.2.2 什么是链式法则
 > 链式法则是关于复合函数的导数的性质，定义如下：如果某个函数由复合函数表示，则该复合函数的导数可以用构成复合函数的各个函数的导数的乘积表示。
 
-以上就是链式法则的原理。假设有：$z=t^2,t=x+y$。链式法则用数学式表示如下。<br />$\frac{\partial z}{\partial x}=\frac{\partial z}{\partial t}\frac{\partial t}{\partial x}$<br />因此，局部导数$\frac{\partial z}{\partial x}=\frac{\partial z}{\partial t}\frac{\partial t}{\partial x}=2t·1=2(x+y)$
+以上就是链式法则的原理。假设有：![](https://cdn.nlark.com/yuque/__latex/e7a382bdb9fbb2165730bffc56c67c3e.svg#card=math&code=z%3Dt%5E2%2Ct%3Dx%2By&id=AoPNR)。链式法则用数学式表示如下。<br />![](https://cdn.nlark.com/yuque/__latex/9430b70c194e9b9d9be4fd80be88e7a9.svg#card=math&code=%5Cfrac%7B%5Cpartial%20z%7D%7B%5Cpartial%20x%7D%3D%5Cfrac%7B%5Cpartial%20z%7D%7B%5Cpartial%20t%7D%5Cfrac%7B%5Cpartial%20t%7D%7B%5Cpartial%20x%7D&id=aOfjn)<br />因此，局部导数![](https://cdn.nlark.com/yuque/__latex/2f3ad9cfed6335b25cd3f803aba6977a.svg#card=math&code=%5Cfrac%7B%5Cpartial%20z%7D%7B%5Cpartial%20x%7D%3D%5Cfrac%7B%5Cpartial%20z%7D%7B%5Cpartial%20t%7D%5Cfrac%7B%5Cpartial%20t%7D%7B%5Cpartial%20x%7D%3D2t%C2%B71%3D2%28x%2By%29&id=oZbiU)
 
 ### 5.2.3 链式法则和计算图
-用“**2”节点表示平方运算，上面链式法则的计算用计算图表示如下。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1682237598895-926bbf13-ee9b-468c-8208-ff52c5f2c4ad.png#averageHue=%23414141&clientId=ue9c1380f-c053-4&from=paste&height=305&id=u16bf74e4&originHeight=381&originWidth=865&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=32081&status=done&style=none&taskId=u1e466180-071e-4737-994a-9e99664f6f4&title=&width=692)<br />如图所示，计算图的反向传播从右到左传播信号。反向传播的计算顺序是先将节点的输入信号乘以节点的局部导数，然后再传递给下一个节点。比如，反向传播时，“**2”节点的输入是$\frac{\partial z}{\partial z}$，将其乘以局部导数$\frac{\partial z}{\partial t}$，然后传递给下一个节点。<br />把$z=t^2,t=x+y$的结果带入上图，如下图所示。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1682238130593-1c16d6c0-0960-4bca-a699-dbff308b6058.png#averageHue=%23414141&clientId=ue9c1380f-c053-4&from=paste&height=302&id=ub5567d67&originHeight=378&originWidth=861&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=26666&status=done&style=none&taskId=uaeddbdf6-6580-47a1-a842-67437229c0e&title=&width=688.8)
+用“**2”节点表示平方运算，上面链式法则的计算用计算图表示如下。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1682237598895-926bbf13-ee9b-468c-8208-ff52c5f2c4ad.png#averageHue=%23414141&clientId=ue9c1380f-c053-4&from=paste&height=305&id=u16bf74e4&originHeight=381&originWidth=865&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=32081&status=done&style=none&taskId=u1e466180-071e-4737-994a-9e99664f6f4&title=&width=692)<br />如图所示，计算图的反向传播从右到左传播信号。反向传播的计算顺序是先将节点的输入信号乘以节点的局部导数，然后再传递给下一个节点。比如，反向传播时，“**2”节点的输入是![](https://cdn.nlark.com/yuque/__latex/867edb8efe0a9857e57f8c8bde159c02.svg#card=math&code=%5Cfrac%7B%5Cpartial%20z%7D%7B%5Cpartial%20z%7D&id=vSCLK)，将其乘以局部导数![](https://cdn.nlark.com/yuque/__latex/0cbfc06e476908382ec2b78ef775dbb8.svg#card=math&code=%5Cfrac%7B%5Cpartial%20z%7D%7B%5Cpartial%20t%7D&id=dECF1)，然后传递给下一个节点。<br />把![](https://cdn.nlark.com/yuque/__latex/e7a382bdb9fbb2165730bffc56c67c3e.svg#card=math&code=z%3Dt%5E2%2Ct%3Dx%2By&id=TJ1q2)的结果带入上图，如下图所示。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1682238130593-1c16d6c0-0960-4bca-a699-dbff308b6058.png#averageHue=%23414141&clientId=ue9c1380f-c053-4&from=paste&height=302&id=ub5567d67&originHeight=378&originWidth=861&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=26666&status=done&style=none&taskId=uaeddbdf6-6580-47a1-a842-67437229c0e&title=&width=688.8)
 
 ## 5.3 反向传播
 ### 5.3.1 加法节点的反向传播
-以$z=x+y$为对象，观察其反向传播。且导数为：$\frac{\partial z}{\partial x}= 1,\frac{\partial z}{\partial y}= 1$。因此，用计算图表示如下。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1682298781855-1720ebaf-dccf-4da1-ac05-df0a7c719e0a.png#averageHue=%23414141&clientId=uc472159d-9ad5-4&from=paste&height=297&id=ufc7c8b33&originHeight=371&originWidth=863&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=27623&status=done&style=none&taskId=ucc5a61fc-5869-4b96-b4e1-36dd6a13590&title=&width=690.4)<br />上图中，反向传播从上游传过来的导数乘以1，然后传向下游。也就是说，因为加法节点的反向传播只乘以1，所以输入的值回原封不动地流向下一个节点。
+以![](https://cdn.nlark.com/yuque/__latex/2b6fedd11fb5c16ef005b49edf1796c4.svg#card=math&code=z%3Dx%2By&id=nzLG2)为对象，观察其反向传播。且导数为：![](https://cdn.nlark.com/yuque/__latex/dcb5bf359ebb515a566e9ea13e29a384.svg#card=math&code=%5Cfrac%7B%5Cpartial%20z%7D%7B%5Cpartial%20x%7D%3D%201%2C%5Cfrac%7B%5Cpartial%20z%7D%7B%5Cpartial%20y%7D%3D%201&id=OeX4k)。因此，用计算图表示如下。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1682298781855-1720ebaf-dccf-4da1-ac05-df0a7c719e0a.png#averageHue=%23414141&clientId=uc472159d-9ad5-4&from=paste&height=297&id=ufc7c8b33&originHeight=371&originWidth=863&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=27623&status=done&style=none&taskId=ucc5a61fc-5869-4b96-b4e1-36dd6a13590&title=&width=690.4)<br />上图中，反向传播从上游传过来的导数乘以1，然后传向下游。也就是说，因为加法节点的反向传播只乘以1，所以输入的值回原封不动地流向下一个节点。
 
 下面是一个加法的反向传播的具体例子。假设有“10+5=15”这一计算，反向传播时，从上游传来值1.3，则计算图表示如下。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1682298995603-c3b790cf-d0f6-4968-b15c-3af02bf87f74.png#averageHue=%23414141&clientId=uc472159d-9ad5-4&from=paste&height=296&id=uf4ca1eeb&originHeight=370&originWidth=864&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=24355&status=done&style=none&taskId=u1691fcec-648c-4457-a4da-39df5397429&title=&width=691.2)<br />因为加法节点的反向传播只是将输入信号输出到下一个节点，所以上图反向传播将 1.3 向下一个节点传递。
 
 ### 5.3.2 乘法节点的反向传播
-以$z=xy$为对象，观察其反向传播。且导数为：$\frac{\partial z}{\partial x}= y,\frac{\partial z}{\partial y}= x$。因此，用计算图表示如下。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1682299244081-3c1217e7-51da-42b6-acbf-81f8c2332fab.png#averageHue=%23414141&clientId=uc472159d-9ad5-4&from=paste&height=296&id=u6bfeb42b&originHeight=370&originWidth=861&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=28943&status=done&style=none&taskId=u4d366c6c-de11-4a32-9054-5c56b4747bc&title=&width=688.8)<br />乘法的反向传播会将上游的值乘以正向传播时输入信号的“翻转值”后传递给下游。
+以![](https://cdn.nlark.com/yuque/__latex/6db7773c03e177fa2ea87edb558d64a2.svg#card=math&code=z%3Dxy&id=ycALH)为对象，观察其反向传播。且导数为：![](https://cdn.nlark.com/yuque/__latex/ac7637282c1a6559b16b7002002ef6b4.svg#card=math&code=%5Cfrac%7B%5Cpartial%20z%7D%7B%5Cpartial%20x%7D%3D%20y%2C%5Cfrac%7B%5Cpartial%20z%7D%7B%5Cpartial%20y%7D%3D%20x&id=LfbyP)。因此，用计算图表示如下。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1682299244081-3c1217e7-51da-42b6-acbf-81f8c2332fab.png#averageHue=%23414141&clientId=uc472159d-9ad5-4&from=paste&height=296&id=u6bfeb42b&originHeight=370&originWidth=861&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=28943&status=done&style=none&taskId=u4d366c6c-de11-4a32-9054-5c56b4747bc&title=&width=688.8)<br />乘法的反向传播会将上游的值乘以正向传播时输入信号的“翻转值”后传递给下游。
 
 下面是一个乘法的反向传播的具体例子。假设有“10×5=15”这一计算，反向传播时，从上游传来值1.3，则计算图表示如下。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1682299380995-c296305b-1bf4-4c00-80e3-bb6b28b6536c.png#averageHue=%23414141&clientId=uc472159d-9ad5-4&from=paste&height=298&id=u662fa36f&originHeight=372&originWidth=865&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=26739&status=done&style=none&taskId=u53095dbb-a1e6-4410-9d23-1bdbd65c9e9&title=&width=692)<br />因为乘法的反向传播会乘以输入信号的翻转值，所以各自可按1.3 × 5 = 6.5、1.3 × 10 = 13计算。另外，加法的反向传播只是将上游的值传给下游，并不需要正向传播的输入信号。但是，乘法的反向传播需要正向传播时的输入信号值。因此，实现乘法节点的反向传播时，要保存正向传播的输入信号。
 
@@ -1674,7 +1677,7 @@ print(dapple_num,dapple, dorange,dorange_num,dtax) # 110 2.2 3.3 165 650
 把构成神经网络的层实现为一个类。先来实现激活函数的ReLU层和Sigmoid层。
 
 ### 5.5.1 ReLU层
-激活函数ReLU（Rectified Linear Unit）如下所示。<br />$y = \begin{cases} x \quad (x > 0) \\ 0 \quad (x \le 0) \end{cases}$<br />通过上式，可以求出y关于x的导数如下所示。<br />$\frac{\partial y}{\partial x} = \begin{cases} 1 \quad (x > 0) \\ 0 \quad (x \le 0) \end{cases}$<br />在上式中，如果正向传播时的输入x大于0，则反向传播会将上游的值原封不动地传给下游。反过来，如果正向传播时的x小于等于0，则反向传播中传给下游的信号将停在此处。用计算图表示如下所示。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1682337722393-fa7ed26c-c10e-4b61-afe3-b82f150e50fb.png#averageHue=%23414141&clientId=ud5e17f85-f041-4&from=paste&height=186&id=ua487415d&originHeight=232&originWidth=864&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=21209&status=done&style=none&taskId=u4bb7abd5-ee6e-49ff-b623-0a7f88a6351&title=&width=691.2)<br />下面用Python来实现ReLU层。在神经网络的层的实现中，一般假定forward()和backward()的参数是NumPy数组。
+激活函数ReLU（Rectified Linear Unit）如下所示。<br />![](https://cdn.nlark.com/yuque/__latex/9d0f1a216c00bc2a32b1be48afb0ac37.svg#card=math&code=y%20%3D%20%5Cbegin%7Bcases%7D%20x%20%5Cquad%20%28x%20%3E%200%29%20%5C%5C%200%20%5Cquad%20%28x%20%5Cle%200%29%20%5Cend%7Bcases%7D&id=S6fvp)<br />通过上式，可以求出y关于x的导数如下所示。<br />![](https://cdn.nlark.com/yuque/__latex/0d840b23d3cdbe13fe01cfa3abd4db61.svg#card=math&code=%5Cfrac%7B%5Cpartial%20y%7D%7B%5Cpartial%20x%7D%20%3D%20%5Cbegin%7Bcases%7D%201%20%5Cquad%20%28x%20%3E%200%29%20%5C%5C%200%20%5Cquad%20%28x%20%5Cle%200%29%20%5Cend%7Bcases%7D&id=QHj9S)<br />在上式中，如果正向传播时的输入x大于0，则反向传播会将上游的值原封不动地传给下游。反过来，如果正向传播时的x小于等于0，则反向传播中传给下游的信号将停在此处。用计算图表示如下所示。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1682337722393-fa7ed26c-c10e-4b61-afe3-b82f150e50fb.png#averageHue=%23414141&clientId=ud5e17f85-f041-4&from=paste&height=186&id=ua487415d&originHeight=232&originWidth=864&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=21209&status=done&style=none&taskId=u4bb7abd5-ee6e-49ff-b623-0a7f88a6351&title=&width=691.2)<br />下面用Python来实现ReLU层。在神经网络的层的实现中，一般假定forward()和backward()的参数是NumPy数组。
 ```python
 class Relu:
     def __init__(self):
@@ -1696,11 +1699,11 @@ Relu类有实例变量mask。这个变量mask是由True/False构成的NumPy数�
 
 
 ### 5.5.2 Sigmoid层
-接下来实现sigmoid函数，函数式如下。<br />$y = \frac{1}{1+e^{-x}}$<br />用计算图表示如下。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1682338766094-e2d0fa39-ccbb-4482-8c6f-db3a79b4863f.png#averageHue=%23414141&clientId=ud5e17f85-f041-4&from=paste&height=186&id=u5c92dc47&originHeight=233&originWidth=837&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=19375&status=done&style=none&taskId=u4c4cba0f-4000-43dd-985e-dffc8d7a4f4&title=&width=669.6)<br />上图中，除了“×”和“+”节点外，还出现了新的“exp”和“/”节点。“exp”节点会进行$y=e^x$的计算，“/”节点会进行的$y= \frac1x$计算。
+接下来实现sigmoid函数，函数式如下。<br />![](https://cdn.nlark.com/yuque/__latex/1cf6880d0b81950256848e4a1e6598cb.svg#card=math&code=y%20%3D%20%5Cfrac%7B1%7D%7B1%2Be%5E%7B-x%7D%7D&id=h868C)<br />用计算图表示如下。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1682338766094-e2d0fa39-ccbb-4482-8c6f-db3a79b4863f.png#averageHue=%23414141&clientId=ud5e17f85-f041-4&from=paste&height=186&id=u5c92dc47&originHeight=233&originWidth=837&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=19375&status=done&style=none&taskId=u4c4cba0f-4000-43dd-985e-dffc8d7a4f4&title=&width=669.6)<br />上图中，除了“×”和“+”节点外，还出现了新的“exp”和“/”节点。“exp”节点会进行![](https://cdn.nlark.com/yuque/__latex/27ffe57a1279a99ac0a6e3f972209ac7.svg#card=math&code=y%3De%5Ex&id=gjg0E)的计算，“/”节点会进行的![](https://cdn.nlark.com/yuque/__latex/6c314e80ccfb22fe6ba873bc757298b4.svg#card=math&code=y%3D%20%5Cfrac1x&id=hdfAD)计算。
 
 如计算图所示，sigmoid函数式的计算由局部计算的传播构成。下面来进行计算图的反向传播。
 
-1. “/”节点表示$y= \frac1x$，其导数可以解析性地表示为：$\frac{\partial y}{\partial x} = -\frac{1}{x^2} = -y^2$。反向传播时，会将上游的值乘以$-y^2$（正向传播的输出的平方乘以−1后的值）后，再传给下游。计算图如下所示。
+1. “/”节点表示![](https://cdn.nlark.com/yuque/__latex/6c314e80ccfb22fe6ba873bc757298b4.svg#card=math&code=y%3D%20%5Cfrac1x&id=ur5pw)，其导数可以解析性地表示为：![](https://cdn.nlark.com/yuque/__latex/be208dc62c18c03976c5a22d7ea58f25.svg#card=math&code=%5Cfrac%7B%5Cpartial%20y%7D%7B%5Cpartial%20x%7D%20%3D%20-%5Cfrac%7B1%7D%7Bx%5E2%7D%20%3D%20-y%5E2&id=rJ5Bq)。反向传播时，会将上游的值乘以![](https://cdn.nlark.com/yuque/__latex/141163ecd267ecd58bc39155dee3314b.svg#card=math&code=-y%5E2%0A&id=rOokX)（正向传播的输出的平方乘以−1后的值）后，再传给下游。计算图如下所示。
 
 ![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1682339461211-0fa7e039-c3b8-492b-a310-b9b08b5d32c7.png#averageHue=%23424242&clientId=ud5e17f85-f041-4&from=paste&height=151&id=u9477a15e&originHeight=189&originWidth=805&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=23286&status=done&style=none&taskId=u95dfa3ce-fc3a-4a34-8ddf-42b754edb42&title=&width=644)
 
@@ -1708,7 +1711,7 @@ Relu类有实例变量mask。这个变量mask是由True/False构成的NumPy数�
 
 ![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1682339504598-377fe734-6d43-48ab-bcba-690c95ca0ff0.png#averageHue=%23424242&clientId=ud5e17f85-f041-4&from=paste&height=158&id=ucbbe688f&originHeight=198&originWidth=804&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=26215&status=done&style=none&taskId=u6675f10b-0d43-4b48-9d23-a771a2b45d1&title=&width=643)
 
-3. “exp”节点表示$y=e^x$，其导数为$\frac{\partial y}{\partial x} = e^x$，计算图中，上游的值乘以正向传播时的输出（这个例子中是exp(−x)）后，再传给下游。
+3. “exp”节点表示![](https://cdn.nlark.com/yuque/__latex/27ffe57a1279a99ac0a6e3f972209ac7.svg#card=math&code=y%3De%5Ex&id=Bh11m)，其导数为![](https://cdn.nlark.com/yuque/__latex/20615c046540f52e46778e46245037f9.svg#card=math&code=%5Cfrac%7B%5Cpartial%20y%7D%7B%5Cpartial%20x%7D%20%3D%20e%5Ex%0A&id=NiA2Y)，计算图中，上游的值乘以正向传播时的输出（这个例子中是exp(−x)）后，再传给下游。
 
 ![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1682339731256-01a7dc74-7c28-4f31-b63e-7219dddc7ae0.png#averageHue=%23424242&clientId=ud5e17f85-f041-4&from=paste&height=146&id=u94f41dfc&originHeight=183&originWidth=815&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=27924&status=done&style=none&taskId=u4f6d2ff2-dc9e-4ffe-82a5-9b893a003c5&title=&width=652)
 
@@ -1716,16 +1719,9 @@ Relu类有实例变量mask。这个变量mask是由True/False构成的NumPy数�
 
 ![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1682339766106-b4856185-bb1a-49f0-925b-67fd1479f807.png#averageHue=%23414141&clientId=ud5e17f85-f041-4&from=paste&height=158&id=ua4b72cff&originHeight=198&originWidth=839&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=31337&status=done&style=none&taskId=ufcfbdfb6-4fe0-472d-9772-5531be83ce5&title=&width=671.2)
 
-由上图结果及上述内容可知，Sigmoid层的反向传播的输出为$\frac{\partial L}{\partial y}y^2e^{-x}$，这个值会传播给下游的节点。这里需要注意的是，$\frac{\partial L}{\partial y}y^2e^{-x}$这个值只根据正向传播时的输入x和输出y就可以算出来。故上面的计算图可以画成如下图所示的集约化“sigmoid”节点。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1682339960237-caf33d95-bdda-47fb-bc59-a1b266c306f7.png#averageHue=%23414141&clientId=ud5e17f85-f041-4&from=paste&height=138&id=u1f1adf52&originHeight=173&originWidth=838&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=14014&status=done&style=none&taskId=u16316542-11b4-4a68-954f-cff25196a9f&title=&width=670.4)
+由上图结果及上述内容可知，Sigmoid层的反向传播的输出为![](https://cdn.nlark.com/yuque/__latex/96dc19e52fb6a51ecbd8135607f6cb45.svg#card=math&code=%5Cfrac%7B%5Cpartial%20L%7D%7B%5Cpartial%20y%7Dy%5E2e%5E%7B-x%7D&id=hX142)，这个值会传播给下游的节点。这里需要注意的是，![](https://cdn.nlark.com/yuque/__latex/96dc19e52fb6a51ecbd8135607f6cb45.svg#card=math&code=%5Cfrac%7B%5Cpartial%20L%7D%7B%5Cpartial%20y%7Dy%5E2e%5E%7B-x%7D&id=BUfU1)这个值只根据正向传播时的输入x和输出y就可以算出来。故上面的计算图可以画成如下图所示的集约化“sigmoid”节点。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1682339960237-caf33d95-bdda-47fb-bc59-a1b266c306f7.png#averageHue=%23414141&clientId=ud5e17f85-f041-4&from=paste&height=138&id=u1f1adf52&originHeight=173&originWidth=838&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=14014&status=done&style=none&taskId=u16316542-11b4-4a68-954f-cff25196a9f&title=&width=670.4)
 
-另外，$\frac{\partial L}{\partial y}y^2e^{-x}$可以进一步整理如下。<br />$\begin{equation*} %加*表示不对公式编号
-	\begin{split}
-		\frac{\partial L}{\partial y}y^2e^{-x}
-		& =  \frac{\partial L}{\partial y} \frac{1}{(1+e^{-x})^2}e^{-x}\\
-		& =  \frac{\partial L}{\partial y} \frac{1}{1+e^{-x}}\frac{e^{-x}}{1+e^{-x}}\\
-		& = \frac{\partial L}{\partial y}y(1-y)
-	\end{split}
-\end{equation*}$<br />故下图为Sigmoid层的反向传播，只根据正向传播的输出就能计算出来。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1682340392354-fc9b76d0-ea94-4cf5-ae0a-4a0cd18727f6.png#averageHue=%23414141&clientId=ud5e17f85-f041-4&from=paste&height=138&id=u33c631ab&originHeight=173&originWidth=837&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=12963&status=done&style=none&taskId=u890094ff-7fd6-41e5-9c85-6679b073dd5&title=&width=669.6)
+另外，![](https://cdn.nlark.com/yuque/__latex/96dc19e52fb6a51ecbd8135607f6cb45.svg#card=math&code=%5Cfrac%7B%5Cpartial%20L%7D%7B%5Cpartial%20y%7Dy%5E2e%5E%7B-x%7D&id=tHy2p)可以进一步整理如下。<br />![](https://cdn.nlark.com/yuque/__latex/b050f44b85dfc82326f7ad700b949048.svg#card=math&code=%5Cbegin%7Bequation%2A%7D%20%25%E5%8A%A0%2A%E8%A1%A8%E7%A4%BA%E4%B8%8D%E5%AF%B9%E5%85%AC%E5%BC%8F%E7%BC%96%E5%8F%B7%0A%09%5Cbegin%7Bsplit%7D%0A%09%09%5Cfrac%7B%5Cpartial%20L%7D%7B%5Cpartial%20y%7Dy%5E2e%5E%7B-x%7D%0A%09%09%26%20%3D%20%20%5Cfrac%7B%5Cpartial%20L%7D%7B%5Cpartial%20y%7D%20%5Cfrac%7B1%7D%7B%281%2Be%5E%7B-x%7D%29%5E2%7De%5E%7B-x%7D%5C%5C%0A%09%09%26%20%3D%20%20%5Cfrac%7B%5Cpartial%20L%7D%7B%5Cpartial%20y%7D%20%5Cfrac%7B1%7D%7B1%2Be%5E%7B-x%7D%7D%5Cfrac%7Be%5E%7B-x%7D%7D%7B1%2Be%5E%7B-x%7D%7D%5C%5C%0A%09%09%26%20%3D%20%5Cfrac%7B%5Cpartial%20L%7D%7B%5Cpartial%20y%7Dy%281-y%29%0A%09%5Cend%7Bsplit%7D%0A%5Cend%7Bequation%2A%7D%20&id=vWWue)<br />故下图为Sigmoid层的反向传播，只根据正向传播的输出就能计算出来。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1682340392354-fc9b76d0-ea94-4cf5-ae0a-4a0cd18727f6.png#averageHue=%23414141&clientId=ud5e17f85-f041-4&from=paste&height=138&id=u33c631ab&originHeight=173&originWidth=837&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=12963&status=done&style=none&taskId=u890094ff-7fd6-41e5-9c85-6679b073dd5&title=&width=669.6)
 
 现在用Python实现Sigmoid层。
 ```python
@@ -1750,12 +1746,10 @@ class Sigmoid:
 
 现在将这里进行的求矩阵的乘积与偏置的和的运算用计算图表示出来。将乘积运算用“dot”节点表示的话，则`np.dot(X, W) + B`的运算可用下图所示的计算图表示出来。另外，在各个变量的上方标记了它们的形状（比如，计算图上显示了X的形状为(2,)，X·W的形状为(3,)等）。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1682388119453-1f5c061c-f326-48bb-b8c6-8b00e057af67.png#averageHue=%23414141&clientId=ueefafb51-da6a-4&from=paste&height=302&id=u2159ed74&originHeight=378&originWidth=865&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=26007&status=done&style=none&taskId=u03024b04-48c5-48e0-9efa-c77a3ef5a6a&title=&width=692)<br />上图是比较简单的计算图，不过要注意X、W、B是矩阵（多维数组）。之前我们见到的计算图中各个节点间流动的是标量，而这个例子中各个节点间传播的是矩阵。
 
-下面来考虑上面这个计算图的反向传播。以矩阵为对象的反向传播，按矩阵的各个元素进行计算时，步骤和以标量为对象的计算图相同。实际写一下的话，可以得到下式。<br />$\frac{\partial L}{\partial X} = \frac{\partial L}{\partial Y}·W^T \\
- \ \\
-\frac{\partial L}{\partial W} = X^T·\frac{\partial L}{\partial Y}$<br />根据上式写出计算图的反向传播。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1682388616114-0167e161-f262-4efc-a54d-4284600715bc.png#averageHue=%23414141&clientId=ueefafb51-da6a-4&from=paste&height=386&id=u98233bc4&originHeight=482&originWidth=862&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=62187&status=done&style=none&taskId=u11758d87-231e-4163-86c8-771291a6c16&title=&width=689.6)<br />注意计算图中各个变量的形状。$X$和$\frac{\partial L}{\partial X}$形状相同，$W$和$\frac{\partial L}{\partial W}$形状相同。
+下面来考虑上面这个计算图的反向传播。以矩阵为对象的反向传播，按矩阵的各个元素进行计算时，步骤和以标量为对象的计算图相同。实际写一下的话，可以得到下式。<br />![](https://cdn.nlark.com/yuque/__latex/d10b21fb572bdff2a07c348c102f2ea6.svg#card=math&code=%5Cfrac%7B%5Cpartial%20L%7D%7B%5Cpartial%20X%7D%20%3D%20%5Cfrac%7B%5Cpartial%20L%7D%7B%5Cpartial%20Y%7D%C2%B7W%5ET%20%5C%5C%0A%20%5C%20%5C%5C%0A%5Cfrac%7B%5Cpartial%20L%7D%7B%5Cpartial%20W%7D%20%3D%20X%5ET%C2%B7%5Cfrac%7B%5Cpartial%20L%7D%7B%5Cpartial%20Y%7D&id=AUJNy)<br />根据上式写出计算图的反向传播。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1682388616114-0167e161-f262-4efc-a54d-4284600715bc.png#averageHue=%23414141&clientId=ueefafb51-da6a-4&from=paste&height=386&id=u98233bc4&originHeight=482&originWidth=862&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=62187&status=done&style=none&taskId=u11758d87-231e-4163-86c8-771291a6c16&title=&width=689.6)<br />注意计算图中各个变量的形状。![](https://cdn.nlark.com/yuque/__latex/94e79ad0c1aabeafef9e2fc4af6adf66.svg#card=math&code=X&id=c6UHm)和![](https://cdn.nlark.com/yuque/__latex/9f0e97e32d9617b725589f3aada0fa54.svg#card=math&code=%5Cfrac%7B%5Cpartial%20L%7D%7B%5Cpartial%20X%7D&id=BqMaD)形状相同，![](https://cdn.nlark.com/yuque/__latex/a36915ecf0b5605493f5aeaf1480a9ac.svg#card=math&code=W&id=K76rh)和![](https://cdn.nlark.com/yuque/__latex/36e5597d13be0b891d1dbb4a7b2f5f0d.svg#card=math&code=%5Cfrac%7B%5Cpartial%20L%7D%7B%5Cpartial%20W%7D&id=GAXNO)形状相同。
 
 ### 5.6.2 批版本的Affine层
-前面介绍的Affine层的输入X是以单个数据为对象的。现在我们考虑N个数据一起进行正向传播的情况，也就是批版本的Affine层。下面是批版本的Affine层的计算图。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1682389275505-be09b6cf-65da-4a77-9c26-5b468bbfd67c.png#averageHue=%23424242&clientId=ueefafb51-da6a-4&from=paste&height=414&id=uc98b5281&originHeight=517&originWidth=865&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=76503&status=done&style=none&taskId=uf9060104-e48d-4b8b-9145-1f9f877b49f&title=&width=692)<br />与刚刚不同的是，现在输入X的形状是(N, 2)。之后就和前面一样，在计算图上进行单纯的矩阵计算。反向传播时，如果注意矩阵的形状，就可以和前面一样推导出$\frac{\partial L}{\partial X}$和$\frac{\partial L}{\partial W}$。
+前面介绍的Affine层的输入X是以单个数据为对象的。现在我们考虑N个数据一起进行正向传播的情况，也就是批版本的Affine层。下面是批版本的Affine层的计算图。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1682389275505-be09b6cf-65da-4a77-9c26-5b468bbfd67c.png#averageHue=%23424242&clientId=ueefafb51-da6a-4&from=paste&height=414&id=uc98b5281&originHeight=517&originWidth=865&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=76503&status=done&style=none&taskId=uf9060104-e48d-4b8b-9145-1f9f877b49f&title=&width=692)<br />与刚刚不同的是，现在输入X的形状是(N, 2)。之后就和前面一样，在计算图上进行单纯的矩阵计算。反向传播时，如果注意矩阵的形状，就可以和前面一样推导出![](https://cdn.nlark.com/yuque/__latex/9f0e97e32d9617b725589f3aada0fa54.svg#card=math&code=%5Cfrac%7B%5Cpartial%20L%7D%7B%5Cpartial%20X%7D&id=mZU8I)和![](https://cdn.nlark.com/yuque/__latex/36e5597d13be0b891d1dbb4a7b2f5f0d.svg#card=math&code=%5Cfrac%7B%5Cpartial%20L%7D%7B%5Cpartial%20W%7D&id=CNTy0)。
 
 正向传播时，偏置会被加到每一个数据（第1个、第2个……）上。因此，反向传播时，各个数据的反向传播的值需要汇总为偏置的元素。代码表示如下。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1682389506230-c7bc3999-4eb8-4184-8a9e-61348c006450.png#averageHue=%2330343c&clientId=ueefafb51-da6a-4&from=paste&height=178&id=u20c2ae7e&originHeight=222&originWidth=526&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=16556&status=done&style=none&taskId=u282cb4ed-7472-4ad3-ae85-1e325325b6a&title=&width=420.8)<br />这个例子中，假定数据有2个（N = 2）。偏置的反向传播会对这2个数据的导数按元素进行求和。因此，这里使用了np.sum()对第0轴（以数据为单位的轴，axis=0）方向上的元素进行求和。
 
@@ -2046,7 +2040,7 @@ for i in range(iters_num):
 2. **随机梯度下降法**（stochastic gradient descent）：使用参数的梯度，沿梯度方向更新参数，并重复这个步骤多次，从而逐渐靠近最优参数，简称SGD。
 
 ### 6.1.1 SGD
-用数学式可以将SGD写成如下式子。<br />$W \leftarrow W-\eta\frac{\partial L}{\partial W}$<br />上面把需要更新的权重参数记为W，把损失函数关于W的梯度记为$\frac{\partial L}{\partial W}$。$\eta$表示学习率，实际上会取 0.01 或 0.001 这些事先决定好的值。式子中的$\leftarrow$表示用右边的值更新左边的值。SGD是朝着梯度方向只前进一定距离的简单方法。<br />下面将SGD实现为一个Python类。
+用数学式可以将SGD写成如下式子。<br />![](https://cdn.nlark.com/yuque/__latex/2e6aec2a64dd04664477fcc19c235c33.svg#card=math&code=W%20%5Cleftarrow%20W-%5Ceta%5Cfrac%7B%5Cpartial%20L%7D%7B%5Cpartial%20W%7D&id=KigMI)<br />上面把需要更新的权重参数记为W，把损失函数关于W的梯度记为![](https://cdn.nlark.com/yuque/__latex/671705d77aa781580f4be5015e46735a.svg#card=math&code=%5Cfrac%7B%5Cpartial%20L%7D%7B%5Cpartial%20W%7D%0A&id=p716x)。![](https://cdn.nlark.com/yuque/__latex/96b0657b0bd8ddf567b3f27d8ad467e6.svg#card=math&code=%5Ceta%0A&id=Q6Kit)表示学习率，实际上会取 0.01 或 0.001 这些事先决定好的值。式子中的![](https://cdn.nlark.com/yuque/__latex/1c4b6f6d50a08c763be1abeca063a01f.svg#card=math&code=%5Cleftarrow&id=YwUvw)表示用右边的值更新左边的值。SGD是朝着梯度方向只前进一定距离的简单方法。<br />下面将SGD实现为一个Python类。
 ```python
 class SGD:
     def __init__(self, lr = 0.01):
@@ -2059,16 +2053,14 @@ class SGD:
 ```
 这里，进行初始化时的参数lr表示learning rate（学习率）。这个学习率会保存为实例变量。此外，代码段中还定义了`update(params, grads)`方法，这个方法在SGD中会被反复调用。参数params和grads（与之前的神经网络的实现一样）是字典型变量，按params['W1']、grads['W1']的形式，分别保存了权重参数和它们的梯度。
 
-考虑这个函数的最小值问题：$f(x,y)=\frac{1}{20}x^2+y^2$<br />如下图所示，上式表示的函数是向 x 轴方向延伸的“碗”状函数。实际上，其的等高线呈向x轴方向延伸的椭圆状。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1682473469104-b0eec39e-3b51-4997-9b73-a50d0efd6362.png#averageHue=%234a4a4a&clientId=u7e2c328a-3440-4&from=paste&height=308&id=u6acbab83&originHeight=385&originWidth=878&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=210900&status=done&style=none&taskId=u31d37ffc-849d-4cb8-8a0e-80eb5205dd5&title=&width=702.4)
+考虑这个函数的最小值问题：![](https://cdn.nlark.com/yuque/__latex/e35c8aabe2007e96db6bf421d268465b.svg#card=math&code=f%28x%2Cy%29%3D%5Cfrac%7B1%7D%7B20%7Dx%5E2%2By%5E2&id=AV2ub)<br />如下图所示，上式表示的函数是向 x 轴方向延伸的“碗”状函数。实际上，其的等高线呈向x轴方向延伸的椭圆状。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1682473469104-b0eec39e-3b51-4997-9b73-a50d0efd6362.png#averageHue=%234a4a4a&clientId=u7e2c328a-3440-4&from=paste&height=308&id=u6acbab83&originHeight=385&originWidth=878&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=210900&status=done&style=none&taskId=u31d37ffc-849d-4cb8-8a0e-80eb5205dd5&title=&width=702.4)
 
 下面是函数的梯度。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1682473564028-85a9e5f2-7f48-4eef-9305-73817d18ab7a.png#averageHue=%23414141&clientId=u7e2c328a-3440-4&from=paste&height=457&id=u29474502&originHeight=571&originWidth=858&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=60674&status=done&style=none&taskId=ud5bafb0a-884c-498e-8f3e-c68b47dfef4&title=&width=686.4)<br />这个梯度的特征是，y轴方向上大，x轴方向上小。换句话说，就是y轴方向的坡度大，而x轴方向的坡度小。
 
 SGD的缺点是，如果函数的形状非均向（anisotropic），比如呈延伸状，搜索的路径就会非常低效。SGD低效的根本原因是，梯度的方向并没有指向最小值的方向。
 
 ### 6.1.2 Momentum
-用数学式表示Momentum方法，如下所示。<br />$v\leftarrow\alpha v-\eta\frac{\partial L}{\partial W}\\
-\ \\
-W\leftarrow W+v$<br />和前面的SGD一样，W表示要更新的权重参数，$\frac{\partial L}{\partial W}$表示损失函数关于W的梯度，$\eta$表示学习率。这里出现了一个变量$v$，对应物理上的速度。<br />上面第一个式子表示类物体在梯度方向上的受力，在这个力的作用下，物体的速度增加这一物理法则。如下图所示，Momentum方法给人的感觉就像是小球在地面上滚动。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1682475517203-0ca2a041-1024-4c4c-9845-452688d3b9cb.png#averageHue=%23424242&clientId=u7e2c328a-3440-4&from=paste&height=109&id=u46ad7634&originHeight=136&originWidth=862&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=16077&status=done&style=none&taskId=u71f73332-0e0b-4321-8c23-a142cb17701&title=&width=689.6)<br />第一个式子中有$\alpha v$这一项。在在物体不受任何力时，该项承担使物体逐渐减速的任务（α设定为0.9之类的值），对应物理上的地面摩擦或空气阻力。下面是Momentum的代码实现。
+用数学式表示Momentum方法，如下所示。<br />![](https://cdn.nlark.com/yuque/__latex/18134f44d8fa40a783b3b517876d839b.svg#card=math&code=v%5Cleftarrow%5Calpha%20v-%5Ceta%5Cfrac%7B%5Cpartial%20L%7D%7B%5Cpartial%20W%7D%5C%5C%0A%5C%20%5C%5C%0AW%5Cleftarrow%20W%2Bv&id=PCiro)<br />和前面的SGD一样，W表示要更新的权重参数，![](https://cdn.nlark.com/yuque/__latex/36e5597d13be0b891d1dbb4a7b2f5f0d.svg#card=math&code=%5Cfrac%7B%5Cpartial%20L%7D%7B%5Cpartial%20W%7D&id=BrAnO)表示损失函数关于W的梯度，![](https://cdn.nlark.com/yuque/__latex/7483c6745bb07f292eba02b3a9b55c26.svg#card=math&code=%5Ceta&id=BnZpR)表示学习率。这里出现了一个变量![](https://cdn.nlark.com/yuque/__latex/a770a282bbfa0ae1ec474b7ed311656d.svg#card=math&code=v&id=ar3G0)，对应物理上的速度。<br />上面第一个式子表示类物体在梯度方向上的受力，在这个力的作用下，物体的速度增加这一物理法则。如下图所示，Momentum方法给人的感觉就像是小球在地面上滚动。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1682475517203-0ca2a041-1024-4c4c-9845-452688d3b9cb.png#averageHue=%23424242&clientId=u7e2c328a-3440-4&from=paste&height=109&id=u46ad7634&originHeight=136&originWidth=862&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=16077&status=done&style=none&taskId=u71f73332-0e0b-4321-8c23-a142cb17701&title=&width=689.6)<br />第一个式子中有![](https://cdn.nlark.com/yuque/__latex/03730898a71a86a75da1612602691f66.svg#card=math&code=%5Calpha%20v&id=s5lem)这一项。在在物体不受任何力时，该项承担使物体逐渐减速的任务（α设定为0.9之类的值），对应物理上的地面摩擦或空气阻力。下面是Momentum的代码实现。
 ```python
 class Momentum:
     """Momentum SGD"""
@@ -2089,11 +2081,10 @@ class Momentum:
 ```
 实例变量v会保存物体的速度。初始化时，v中什么都不保存，但当第一次调用`update()`时，v会以字典型变量的形式保存与参数结构相同的数据。剩余部分的代码就是将上面两个数学式写出来。
 
-现在尝试用Momentum解决$f(x,y)=\frac{1}{20}x^2+y^2$的最优化问题。如下图所示。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1682476525886-612623d6-a933-45b6-96bf-ed9c3cbfbdea.png#averageHue=%23414141&clientId=u7e2c328a-3440-4&from=paste&height=463&id=uc7793ada&originHeight=579&originWidth=862&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=60134&status=done&style=none&taskId=u527e3da3-9e7d-488a-a06b-d672f285a96&title=&width=689.6)<br />上图中，更新路径就像小球在碗中滚动一样。和SGD相比，我们发现“之”字形的“程度”减轻了。这是因为虽然x轴方向上受到的力非常小，但是一直在同一方向上受力，所以朝同一个方向会有一定的加速。反过来，虽然y轴方向上受到的力很大，但是因为交互地受到正方向和反方向的力，它们会互相抵消，所以y轴方向上的速度不稳定。因此，和SGD时的情形相比，可以更快地朝x轴方向靠近，减弱“之”字形的变动程度。
+现在尝试用Momentum解决![](https://cdn.nlark.com/yuque/__latex/e35c8aabe2007e96db6bf421d268465b.svg#card=math&code=f%28x%2Cy%29%3D%5Cfrac%7B1%7D%7B20%7Dx%5E2%2By%5E2&id=aOLA8)的最优化问题。如下图所示。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1682476525886-612623d6-a933-45b6-96bf-ed9c3cbfbdea.png#averageHue=%23414141&clientId=u7e2c328a-3440-4&from=paste&height=463&id=uc7793ada&originHeight=579&originWidth=862&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=60134&status=done&style=none&taskId=u527e3da3-9e7d-488a-a06b-d672f285a96&title=&width=689.6)<br />上图中，更新路径就像小球在碗中滚动一样。和SGD相比，我们发现“之”字形的“程度”减轻了。这是因为虽然x轴方向上受到的力非常小，但是一直在同一方向上受力，所以朝同一个方向会有一定的加速。反过来，虽然y轴方向上受到的力很大，但是因为交互地受到正方向和反方向的力，它们会互相抵消，所以y轴方向上的速度不稳定。因此，和SGD时的情形相比，可以更快地朝x轴方向靠近，减弱“之”字形的变动程度。
 
 ### 6.1.3 AdaGrad
-在神经网络的学习中，学习率（数学式中记为η）的值很重要。学习率过小，会导致学习花费过多时间；反过来，学习率过大，则会导致学习发散而不能正确进行。<br />在关于学习率的有效技巧中，有一种被称为**学习率衰减**（learning rate decay）的方法，即随着学习的进行，使学习率逐渐减小。实际上，一开始“多”学，然后逐渐“少”学的方法，在神经网络的学习中经常被使用。<br />逐渐减小学习率的想法，相当于将“全体”参数的学习率值一起降低。而AdaGrad进一步发展了这个想法，针对“一个一个”的参数，赋予其“定制”的值。<br />AdaGrad会为参数的每个元素适当地调整学习率，与此同时进行学习。下面，用数学式表示AdaGrad的更新方法。<br />$h\leftarrow h+\frac{\partial L}{\partial W} \odot \frac{\partial L}{\partial W} \\ \ \\
-W\leftarrow W-\eta\frac{1}{\sqrt{h}}\frac{\partial L}{\partial W}$<br />这里和前面的SGD一样，新出现的变量h，保存了以前所有梯度值的平方和（第一个式子中的$\odot$表示对应矩阵元素的乘法）。然后在更新参数时，通过乘以$\frac{1}{\sqrt{h}}$，就可以调整学习的尺度。<br />这意味着，参数的元素中变动较大（被大幅更新）的元素的学习率将变小。也就是说，可以按参数的元素进行学习率衰减，使变动大的参数的学习率逐渐减小。
+在神经网络的学习中，学习率（数学式中记为η）的值很重要。学习率过小，会导致学习花费过多时间；反过来，学习率过大，则会导致学习发散而不能正确进行。<br />在关于学习率的有效技巧中，有一种被称为**学习率衰减**（learning rate decay）的方法，即随着学习的进行，使学习率逐渐减小。实际上，一开始“多”学，然后逐渐“少”学的方法，在神经网络的学习中经常被使用。<br />逐渐减小学习率的想法，相当于将“全体”参数的学习率值一起降低。而AdaGrad进一步发展了这个想法，针对“一个一个”的参数，赋予其“定制”的值。<br />AdaGrad会为参数的每个元素适当地调整学习率，与此同时进行学习。下面，用数学式表示AdaGrad的更新方法。<br />![](https://cdn.nlark.com/yuque/__latex/421cd4bc4772fed6d3be300893336da9.svg#card=math&code=h%5Cleftarrow%20h%2B%5Cfrac%7B%5Cpartial%20L%7D%7B%5Cpartial%20W%7D%20%5Codot%20%5Cfrac%7B%5Cpartial%20L%7D%7B%5Cpartial%20W%7D%20%5C%5C%20%5C%20%5C%5C%0AW%5Cleftarrow%20W-%5Ceta%5Cfrac%7B1%7D%7B%5Csqrt%7Bh%7D%7D%5Cfrac%7B%5Cpartial%20L%7D%7B%5Cpartial%20W%7D&id=DSKe0)<br />这里和前面的SGD一样，新出现的变量h，保存了以前所有梯度值的平方和（第一个式子中的![](https://cdn.nlark.com/yuque/__latex/91ce821a8ca33e5aa3c3361109e6a911.svg#card=math&code=%5Codot%0A&id=zSnU5)表示对应矩阵元素的乘法）。然后在更新参数时，通过乘以![](https://cdn.nlark.com/yuque/__latex/611e428d10b70be15264eda0cee04849.svg#card=math&code=%5Cfrac%7B1%7D%7B%5Csqrt%7Bh%7D%7D&id=n3qi6)，就可以调整学习的尺度。<br />这意味着，参数的元素中变动较大（被大幅更新）的元素的学习率将变小。也就是说，可以按参数的元素进行学习率衰减，使变动大的参数的学习率逐渐减小。
 
 下面用Python来实现AdaGrad。
 ```python
@@ -2116,10 +2107,10 @@ class AdaGrad:
 ```
 这里需要注意的是，最后一行加上了微小值1e-7。这是为了防止当`self.h[key]`中有0时，将0用作除数的情况。
 
-试着使用AdaGrad解决$f(x,y)=\frac{1}{20}x^2+y^2$的最优化问题。如下图所示。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1682478475723-14b9bba4-0e0c-4882-9d37-d77db20e8f4e.png#averageHue=%23414141&clientId=u7e2c328a-3440-4&from=paste&height=486&id=u89f7d043&originHeight=607&originWidth=860&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=60314&status=done&style=none&taskId=u0cb6f1b8-135f-4f52-975d-c39aa464243&title=&width=688)<br />由上图的结果可知，函数的取值高效地向着最小值移动。由于y轴方向上的梯度较大，因此刚开始变动较大，但是后面会根据这个较大的变动按比例进行调整，减小更新的步伐。因此，y轴方向上的更新程度被减弱，“之”字形的变动程度有所衰减。
+试着使用AdaGrad解决![](https://cdn.nlark.com/yuque/__latex/e35c8aabe2007e96db6bf421d268465b.svg#card=math&code=f%28x%2Cy%29%3D%5Cfrac%7B1%7D%7B20%7Dx%5E2%2By%5E2&id=O0gAI)的最优化问题。如下图所示。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1682478475723-14b9bba4-0e0c-4882-9d37-d77db20e8f4e.png#averageHue=%23414141&clientId=u7e2c328a-3440-4&from=paste&height=486&id=u89f7d043&originHeight=607&originWidth=860&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=60314&status=done&style=none&taskId=u0cb6f1b8-135f-4f52-975d-c39aa464243&title=&width=688)<br />由上图的结果可知，函数的取值高效地向着最小值移动。由于y轴方向上的梯度较大，因此刚开始变动较大，但是后面会根据这个较大的变动按比例进行调整，减小更新的步伐。因此，y轴方向上的更新程度被减弱，“之”字形的变动程度有所衰减。
 
 ### 6.1.4 Adam
-Adam理论方法：融合了Momentum和AdaGrad的方法。通过组合前面两个方法的优点，有望实现参数空间的高效搜索。<br />试着使用Adam解决式$f(x,y)=\frac{1}{20}x^2+y^2$的最优化问题。如下图所示。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1682513133337-de38f409-422a-4570-b92b-7ac49a69e8cf.png#averageHue=%23414141&clientId=u25675a7c-ab54-4&from=paste&height=484&id=u1423dab6&originHeight=605&originWidth=860&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=60189&status=done&style=none&taskId=u48115f98-1c27-4f5c-8e32-42203d37e46&title=&width=688)<br />在上图中，基于 Adam 的更新过程就像小球在碗中滚动一样。虽然Momentun也有类似的移动，但是相比之下，Adam的小球左右摇晃的程度有所减轻。这得益于学习的更新程度被适当地调整了。
+Adam理论方法：融合了Momentum和AdaGrad的方法。通过组合前面两个方法的优点，有望实现参数空间的高效搜索。<br />试着使用Adam解决式![](https://cdn.nlark.com/yuque/__latex/e35c8aabe2007e96db6bf421d268465b.svg#card=math&code=f%28x%2Cy%29%3D%5Cfrac%7B1%7D%7B20%7Dx%5E2%2By%5E2&id=LcAw9)的最优化问题。如下图所示。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1682513133337-de38f409-422a-4570-b92b-7ac49a69e8cf.png#averageHue=%23414141&clientId=u25675a7c-ab54-4&from=paste&height=484&id=u1423dab6&originHeight=605&originWidth=860&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=60189&status=done&style=none&taskId=u48115f98-1c27-4f5c-8e32-42203d37e46&title=&width=688)<br />在上图中，基于 Adam 的更新过程就像小球在碗中滚动一样。虽然Momentun也有类似的移动，但是相比之下，Adam的小球左右摇晃的程度有所减轻。这得益于学习的更新程度被适当地调整了。
 
 ### 6.1.5 更新方法的选择
 下面来比较一下4种方法。如下图所示，根据使用的方法不同，参数更新的路径也不同。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1682514246011-1bfa2757-912e-455d-8a21-30452fa9425e.png#averageHue=%23faf9f9&clientId=u25675a7c-ab54-4&from=paste&height=762&id=u9702b908&originHeight=953&originWidth=1305&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=182186&status=done&style=none&taskId=u6baa7f98-7ace-4511-aa77-b585db268c9&title=&width=1044)<br />只看这个图的话，AdaGrad似乎是最好的，不过也要注意，结果会根据要解决的问题而变。并且，很显然，超参数（学习率等）的设定值不同，结果也会发生变化。
@@ -2189,7 +2180,7 @@ w = np.random.randn(node_num, node_num) * 0.01
 ```
 使用标准差为0.01的高斯分布时，各层的激活值的分布如下图所示。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1682650505915-8efc2109-a60a-41c0-ab66-5a9f0f230bf4.png#averageHue=%23f8f8f8&clientId=u1e7ead7a-7a9f-4&from=paste&height=480&id=u9203b624&originHeight=600&originWidth=800&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=15126&status=done&style=none&taskId=u535231fc-854e-4c99-afd4-4b9b00c08a7&title=&width=640)<br />这次呈集中在0.5附近的分布。因为不像刚才的例子那样偏向0和1，所以不会发生梯度消失的问题。但是，激活值的分布有所偏向，说明在表现力上会有很大问题。因为如果有多个神经元都输出几乎相同的值，那它们就没有存在的意义了。
 
-为了使各层的激活值呈现出具有相同广度的分布，需要合适的权重尺度。结论：如果前一层的节点数为n，则初始值使用标准差为$\frac{1}{\sqrt{n}}$的分布。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1682650688567-6b711280-00c8-45b4-a93a-8606ed6cea95.png#averageHue=%23424242&clientId=u1e7ead7a-7a9f-4&from=paste&height=375&id=uc19e6e48&originHeight=750&originWidth=1329&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=100912&status=done&style=none&taskId=u268921ef-8915-4a67-a692-746f9cd98da&title=&width=665)
+为了使各层的激活值呈现出具有相同广度的分布，需要合适的权重尺度。结论：如果前一层的节点数为n，则初始值使用标准差为![](https://cdn.nlark.com/yuque/__latex/a9d77d3d6322e1d940f78a792f066b02.svg#card=math&code=%5Cfrac%7B1%7D%7B%5Csqrt%7Bn%7D%7D&id=m9dzi)的分布。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1682650688567-6b711280-00c8-45b4-a93a-8606ed6cea95.png#averageHue=%23424242&clientId=u1e7ead7a-7a9f-4&from=paste&height=375&id=uc19e6e48&originHeight=750&originWidth=1329&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=100912&status=done&style=none&taskId=u268921ef-8915-4a67-a692-746f9cd98da&title=&width=665)
 
 使用Xavier初始值后，前一层的节点数越多，要设定为目标节点的初始值的权重尺度就越小。使用Xavier初始值进行如下实验。
 ```python
@@ -2200,7 +2191,7 @@ w = np.random.randn(node_num, node_num) / np.sqrt(1.0/node_num)
 使用Xavier初始值后的结果如下图所示。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1682650854613-10dfb797-8236-42a2-82a4-9b9c15a25d32.png#averageHue=%23f8f8f8&clientId=u1e7ead7a-7a9f-4&from=paste&height=480&id=u6da83faf&originHeight=600&originWidth=800&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=12793&status=done&style=none&taskId=u2c409c10-03f7-4ab3-8761-d548200e81a&title=&width=640)<br />从这个结果可知，越是后面的层，图像变得越歪斜，但是呈现了比之前更有广度的分布。因为各层间传递的数据有适当的广度，所以sigmoid函数的表现力不受限制，有望进行高效的学习。
 
 ### 6.2.3 ReLU的权重初始值
-当激活函数使用ReLU时，一般推荐使用ReLU专用的初始值，也就是Kaiming He等人推荐的初始值，也称为“He初始值”。当前一层的节点数为n 时，He 初始值使用标准差为$\sqrt{\frac{2}{n}}$的高斯分布。<br />下面来看一下激活函数使用ReLU时激活值的分布。给出了3个实验的结果，依次是权重初始值为标准差是0.01的高斯分布（下文简写为“std = 0.01”）时、初始值为Xavier初始值时、初始值为ReLU专用的“He初始值”时的结果<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1682733429237-d0604fd2-44a7-4fea-a4d0-3464cc7f2752.png#averageHue=%23f8f8f8&clientId=u8524795f-50e2-4&from=paste&height=300&id=u7b9b5b8d&originHeight=600&originWidth=800&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=13020&status=done&style=none&taskId=u7d322b8c-9977-4a9c-91aa-c92d9ddd3a0&title=&width=400)![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1682733471102-45635c13-d3f3-479f-a186-dbc9a995935f.png#averageHue=%23f8f8f8&clientId=u8524795f-50e2-4&from=paste&height=300&id=ud2b6f227&originHeight=600&originWidth=800&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=12411&status=done&style=none&taskId=ue24497e4-93c0-4ccd-9311-e77b5adc198&title=&width=400)<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1682733511153-bb8c90a3-7f3b-4f0d-8097-4e85f798c449.png#averageHue=%23f8f8f8&clientId=u8524795f-50e2-4&from=paste&height=300&id=u3e1edfb6&originHeight=600&originWidth=800&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=12253&status=done&style=none&taskId=u6183ab7d-a74b-40f6-bb8a-96139b4bbdd&title=&width=400)<br />观察实验结果可知
+当激活函数使用ReLU时，一般推荐使用ReLU专用的初始值，也就是Kaiming He等人推荐的初始值，也称为“He初始值”。当前一层的节点数为n 时，He 初始值使用标准差为![](https://cdn.nlark.com/yuque/__latex/f8a22f43ff54ac581b5e856d03f0636a.svg#card=math&code=%5Csqrt%7B%5Cfrac%7B2%7D%7Bn%7D%7D&id=K66s6)的高斯分布。<br />下面来看一下激活函数使用ReLU时激活值的分布。给出了3个实验的结果，依次是权重初始值为标准差是0.01的高斯分布（下文简写为“std = 0.01”）时、初始值为Xavier初始值时、初始值为ReLU专用的“He初始值”时的结果<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1682733429237-d0604fd2-44a7-4fea-a4d0-3464cc7f2752.png#averageHue=%23f8f8f8&clientId=u8524795f-50e2-4&from=paste&height=300&id=u7b9b5b8d&originHeight=600&originWidth=800&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=13020&status=done&style=none&taskId=u7d322b8c-9977-4a9c-91aa-c92d9ddd3a0&title=&width=400)![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1682733471102-45635c13-d3f3-479f-a186-dbc9a995935f.png#averageHue=%23f8f8f8&clientId=u8524795f-50e2-4&from=paste&height=300&id=ud2b6f227&originHeight=600&originWidth=800&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=12411&status=done&style=none&taskId=ue24497e4-93c0-4ccd-9311-e77b5adc198&title=&width=400)<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1682733511153-bb8c90a3-7f3b-4f0d-8097-4e85f798c449.png#averageHue=%23f8f8f8&clientId=u8524795f-50e2-4&from=paste&height=300&id=u3e1edfb6&originHeight=600&originWidth=800&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=12253&status=done&style=none&taskId=u6183ab7d-a74b-40f6-bb8a-96139b4bbdd&title=&width=400)<br />观察实验结果可知
 
 1. 当“std = 0.01”时，各层的激活值非常小
 2. 接下来是初始值为Xavier初始值时的结果。在这种情况下，随着层的加深，偏向一点点变大。实际上，层加深后，激活值的偏向变大，学习时会出现梯度消失的问题。
@@ -2223,13 +2214,9 @@ w = np.random.randn(node_num, node_num) / np.sqrt(1.0/node_num)
 
 Batch Norm的思路是调整各层的激活值分布使其拥有适当的广度。为此，要向神经网络中插入对数据分布进行正规化的层，即Batch Normalization层（下文简称Batch Norm层），如下图所示。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1682768562624-21b1c53d-ea35-4495-88ed-f220195bfdaf.png#averageHue=%23444444&clientId=ud03c7d79-b997-4&from=paste&height=201&id=u0f6c4c20&originHeight=251&originWidth=858&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=14812&status=done&style=none&taskId=u2533e81f-98ea-4ca1-8ff4-87d57a5e70a&title=&width=686.4)
 
-Batch Norm，顾名思义，以进行学习时的mini-batch为单位，按mini-batch进行正规化。具体而言，就是进行使数据分布的均值为0、方差为1的正规化。用数学式表示的话，如下所示。<br />$\mu_B \leftarrow \frac{1}{m} \sum_{i=1}^mx_i \\
-\ \\
-\sigma^2_B \leftarrow \frac{1}{m}\sum_{i=1}^m(x_i-\mu_B)^2 \\
-\ \\
-\hat{x} \leftarrow \frac{x_i-\mu_B}{\sqrt{\sigma_B^2+\epsilon}}$<br />这里对 mini-batch 的 m 个输入数据的集合 B = {x1, x2, . . . , xm} 求均值$\mu_B$和方差$\sigma^2_B$。然后，对输入数据进行均值为0、方差为1（合适的分布）的正规化。第三个式子中的 $\epsilon$是一个微小值，这是为了防止出现除以0的情况。<br />上式所做的是将mini-batch的输入数据{x1, x2, . . . , xm}变换为均值为0、方差为1的数据 $\hat{x}$。通过将这个处理插入到激活函数的前面（或者后面），可以减小数据分布的偏向。
+Batch Norm，顾名思义，以进行学习时的mini-batch为单位，按mini-batch进行正规化。具体而言，就是进行使数据分布的均值为0、方差为1的正规化。用数学式表示的话，如下所示。<br />![](https://cdn.nlark.com/yuque/__latex/7624513dfb7efbd9451d99186e84ed34.svg#card=math&code=%5Cmu_B%20%5Cleftarrow%20%5Cfrac%7B1%7D%7Bm%7D%20%5Csum_%7Bi%3D1%7D%5Emx_i%20%5C%5C%0A%5C%20%5C%5C%0A%5Csigma%5E2_B%20%5Cleftarrow%20%5Cfrac%7B1%7D%7Bm%7D%5Csum_%7Bi%3D1%7D%5Em%28x_i-%5Cmu_B%29%5E2%20%5C%5C%0A%5C%20%5C%5C%0A%5Chat%7Bx%7D%20%5Cleftarrow%20%5Cfrac%7Bx_i-%5Cmu_B%7D%7B%5Csqrt%7B%5Csigma_B%5E2%2B%5Cepsilon%7D%7D%0A%0A&id=K09Jt)<br />这里对 mini-batch 的 m 个输入数据的集合 B = {x1, x2, . . . , xm} 求均值![](https://cdn.nlark.com/yuque/__latex/342ce27e84d7a807b2cc3bc48fa19785.svg#card=math&code=%5Cmu_B&id=oPG9x)和方差![](https://cdn.nlark.com/yuque/__latex/44bd7a146d2d3d5be1e887d1e976647d.svg#card=math&code=%5Csigma%5E2_B&id=MIKQM)。然后，对输入数据进行均值为0、方差为1（合适的分布）的正规化。第三个式子中的 ![](https://cdn.nlark.com/yuque/__latex/7c102e7a7d231bf935f9bc23417779a8.svg#card=math&code=%5Cepsilon&id=cKKh7)是一个微小值，这是为了防止出现除以0的情况。<br />上式所做的是将mini-batch的输入数据{x1, x2, . . . , xm}变换为均值为0、方差为1的数据 ![](https://cdn.nlark.com/yuque/__latex/c3250d8e3ddfbbb53294f4de57c62c6b.svg#card=math&code=%5Chat%7Bx%7D&id=L5W6k)。通过将这个处理插入到激活函数的前面（或者后面），可以减小数据分布的偏向。
 
-接着，Batch Norm层会对正规化后的数据进行缩放和平移的变换，用数学式可以如下表示<br />$y_i \leftarrow \gamma \hat{x_i} + \beta$<br />这里，$\gamma$和 $\beta$是参数，一开始$\gamma = 1, \beta = 0$，然后再通过学习调整到合适的值。
+接着，Batch Norm层会对正规化后的数据进行缩放和平移的变换，用数学式可以如下表示<br />![](https://cdn.nlark.com/yuque/__latex/eb59939534f83061388c4deef455a90b.svg#card=math&code=y_i%20%5Cleftarrow%20%5Cgamma%20%5Chat%7Bx_i%7D%20%2B%20%5Cbeta&id=yzknH)<br />这里，![](https://cdn.nlark.com/yuque/__latex/4aa418d6f0b6fbada90489b4374752e5.svg#card=math&code=%5Cgamma&id=TJ5RZ)和 ![](https://cdn.nlark.com/yuque/__latex/6100158802e722a88c15efc101fc275b.svg#card=math&code=%5Cbeta&id=LKUG5)是参数，一开始![](https://cdn.nlark.com/yuque/__latex/c60931bf99aee7b205a1bd42f4ceeaea.svg#card=math&code=%5Cgamma%20%3D%201%2C%20%5Cbeta%20%3D%200&id=Wgjkg)，然后再通过学习调整到合适的值。
 
 以上就是Batch Norm的算法。这个算法是神经网络上的正向传播。用计算图可以表示如下。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1682770047200-fd01046e-a3fb-4e2e-a6e4-5ef3f6b6a019.png#averageHue=%23424242&clientId=ud03c7d79-b997-4&from=paste&height=214&id=ucaaab434&originHeight=268&originWidth=858&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=40979&status=done&style=none&taskId=u92ab5981-8616-4877-8bda-ead14a25600&title=&width=686.4)
 
@@ -2302,7 +2289,7 @@ train_acc_list和test_acc_list中以epoch为单位（看完了所有训练数据
 ### 6.4.2 权值衰减
 > 权值衰减是一直以来经常被使用的一种抑制过拟合的方法。该方法通过在学习的过程中对大的权重进行惩罚，来抑制过拟合。很多过拟合原本就是因为权重参数取值过大才发生的。
 
-如果将权重记为W，L2范数的权值衰减就是$\frac{1}{2} \lambda W^2$，然后将这个$\frac{1}{2} \lambda W^2$加到损失函数上。这里，λ是控制正则化强度的超参数。λ设置得越大，对大的权重施加的惩罚就越重。此外，$\frac{1}{2} \lambda W^2$开头的$1\over2$是用于将$\frac{1}{2} \lambda W^2$的求导结果变成λW的调整用常量。
+如果将权重记为W，L2范数的权值衰减就是![](https://cdn.nlark.com/yuque/__latex/e4a2bd7b70cde95138f14c6fc1c332d5.svg#card=math&code=%5Cfrac%7B1%7D%7B2%7D%20%5Clambda%20W%5E2&id=oGv5s)，然后将这个![](https://cdn.nlark.com/yuque/__latex/e4a2bd7b70cde95138f14c6fc1c332d5.svg#card=math&code=%5Cfrac%7B1%7D%7B2%7D%20%5Clambda%20W%5E2&id=Y72TZ)加到损失函数上。这里，λ是控制正则化强度的超参数。λ设置得越大，对大的权重施加的惩罚就越重。此外，![](https://cdn.nlark.com/yuque/__latex/e4a2bd7b70cde95138f14c6fc1c332d5.svg#card=math&code=%5Cfrac%7B1%7D%7B2%7D%20%5Clambda%20W%5E2&id=d8xlx)开头的![](https://cdn.nlark.com/yuque/__latex/72067414d4f00caec2212e5c10479a88.svg#card=math&code=1%5Cover2&id=bobmd)是用于将![](https://cdn.nlark.com/yuque/__latex/e4a2bd7b70cde95138f14c6fc1c332d5.svg#card=math&code=%5Cfrac%7B1%7D%7B2%7D%20%5Clambda%20W%5E2&id=iVmmj)的求导结果变成λW的调整用常量。
 
 对于刚刚进行的实验，应用λ = 0.1的权值衰减，结果如下图所示。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1682821534433-df23fbae-f570-41be-b341-466397f7b4ed.png#averageHue=%23fcfaf9&clientId=ua97b6888-9e44-4&from=paste&height=480&id=u75f903cc&originHeight=600&originWidth=800&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=39085&status=done&style=none&taskId=udf1d265f-5f85-40cd-bad3-bcabea7bcfd&title=&width=640)<br />虽然训练数据的识别精度和测试数据的识别精度之间有差距，但是与没有使用权值衰减的上图的结果相比，差距变小了。这说明过拟合受到了抑制。此外，还要注意，训练数据的识别精度没有达到100%（1.0）
 
@@ -2372,12 +2359,12 @@ t_train = t_train[validation_num:]
 ### 6.5.3 超参数最优化的实现
 现在，我们使用MNIST数据集进行超参数的最优化。这里我们将学习率和控制权值衰减强度的系数（下文称为“权值衰减系数”）这两个超参数的搜索问题作为对象。
 
-通过从 0.001到 1000这样的对数尺度的范围中随机采样进行超参数的验证。这在Python中可以写成10 ** np.random.uniform(-3, 3)。在该实验中，权值衰减系数的初始范围为$10^{-8}$到$10^{-4}$，学习率的初始范围为$10^{-6}$到$10^{-2}$。此时，超参数的随机采样的代码如下所示。
+通过从 0.001到 1000这样的对数尺度的范围中随机采样进行超参数的验证。这在Python中可以写成10 ** np.random.uniform(-3, 3)。在该实验中，权值衰减系数的初始范围为![](https://cdn.nlark.com/yuque/__latex/69806b82ffec24468b61d0dfa2945017.svg#card=math&code=10%5E%7B-8%7D&id=hk4vo)到![](https://cdn.nlark.com/yuque/__latex/0862c3e735b7923c475f6e3c30ff4961.svg#card=math&code=10%5E%7B-4%7D&id=lmS6V)，学习率的初始范围为![](https://cdn.nlark.com/yuque/__latex/1f35f0355bf21f1a16eea780823a6768.svg#card=math&code=10%5E%7B-6%7D&id=Urkht)到![](https://cdn.nlark.com/yuque/__latex/b6ff88cd45e46c1201e2a4dcdafd91e0.svg#card=math&code=10%5E%7B-2%7D&id=bpx5P)。此时，超参数的随机采样的代码如下所示。
 ```python
 weight_decay = 10 ** np.random.uniform(-8, -4)
 lr = 10 ** np.random.uniform(-6, -2)
 ```
-像这样进行随机采样后，再使用那些值进行学习。之后，多次使用各种超参数的值重复进行学习，观察合乎逻辑的超参数在哪里。实验结果如下所示。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1682843311782-0d3ff2a7-14af-43bd-a41d-ad9a22b2fde4.png#averageHue=%23fbfbfa&clientId=ua97b6888-9e44-4&from=paste&height=1054&id=sR5q3&originHeight=1317&originWidth=2560&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=209147&status=done&style=none&taskId=u2ff7ce99-b341-49fb-bec8-37cff698b0f&title=&width=2048)<br />上图中，按识别精度从高到低的顺序排列了验证数据的学习的变化。从图中可知，直到“Best-5”左右，学习进行得都很顺利。因此，我们来观察一下“Best-5”之前的超参数的值（学习率和权值衰减系数），结果如下所示。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1682843377286-cb3295f9-032a-4aad-9568-a26a56bfb40e.png#averageHue=%23313a41&clientId=ua97b6888-9e44-4&from=paste&height=98&id=u90b4368b&originHeight=122&originWidth=859&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=35635&status=done&style=none&taskId=uc3088e59-23ec-4d62-9745-3cac4ab18aa&title=&width=687.2)<br />从这个结果可以看出，学习率在0.001到0.01、权值衰减系数在$10^{-8}$到$10^{-6}$之间时，学习可以顺利进行。像这样，观察可以使学习顺利进行的超参数的范围，从而缩小值的范围。然后，在这个缩小的范围中重复相同的操作。这样就能缩小到合适的超参数的存在范围，然后在某个阶段，选择一个最终的超参数的值。
+像这样进行随机采样后，再使用那些值进行学习。之后，多次使用各种超参数的值重复进行学习，观察合乎逻辑的超参数在哪里。实验结果如下所示。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1682843311782-0d3ff2a7-14af-43bd-a41d-ad9a22b2fde4.png#averageHue=%23fbfbfa&clientId=ua97b6888-9e44-4&from=paste&height=1054&id=sR5q3&originHeight=1317&originWidth=2560&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=209147&status=done&style=none&taskId=u2ff7ce99-b341-49fb-bec8-37cff698b0f&title=&width=2048)<br />上图中，按识别精度从高到低的顺序排列了验证数据的学习的变化。从图中可知，直到“Best-5”左右，学习进行得都很顺利。因此，我们来观察一下“Best-5”之前的超参数的值（学习率和权值衰减系数），结果如下所示。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1682843377286-cb3295f9-032a-4aad-9568-a26a56bfb40e.png#averageHue=%23313a41&clientId=ua97b6888-9e44-4&from=paste&height=98&id=u90b4368b&originHeight=122&originWidth=859&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=35635&status=done&style=none&taskId=uc3088e59-23ec-4d62-9745-3cac4ab18aa&title=&width=687.2)<br />从这个结果可以看出，学习率在0.001到0.01、权值衰减系数在![](https://cdn.nlark.com/yuque/__latex/69806b82ffec24468b61d0dfa2945017.svg#card=math&code=10%5E%7B-8%7D&id=CWqYr)到![](https://cdn.nlark.com/yuque/__latex/1f35f0355bf21f1a16eea780823a6768.svg#card=math&code=10%5E%7B-6%7D&id=n0GhO)之间时，学习可以顺利进行。像这样，观察可以使学习顺利进行的超参数的范围，从而缩小值的范围。然后，在这个缩小的范围中重复相同的操作。这样就能缩小到合适的超参数的存在范围，然后在某个阶段，选择一个最终的超参数的值。
 
 # 7 卷积神经网络
 > 卷积神经网络（Convolutional Neural Network，CNN），CNN被用于图像识别、语音识别等各种场合
@@ -2420,29 +2407,21 @@ lr = 10 ** np.random.uniform(-6, -2)
 
 之前的例子中步幅都是1，如果将步幅设为2，则如下图所示，应用滤波器的窗口的间隔变为2个元素。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1683190982768-2eb781f6-a055-4cc6-80e5-fda90ecee2d3.png#averageHue=%23444444&clientId=u7b232bfd-962a-4&from=paste&height=490&id=u4dc61767&originHeight=612&originWidth=861&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=61754&status=done&style=none&taskId=ue4ac2b72-aabd-419d-95a3-92cdefd7e9b&title=&width=688.8)<br />像这样，步幅可以指定应用滤波器的间隔。综上，增大步幅后，输出大小会变小。而增大填充后，输出大小会变大。
 
-将这样的关系写成算式。假设输入大小为(H, W)，滤波器大小为(FH, FW)，输出大小为(OH, OW)，填充为P，步幅为S。此时，输出大小可通过下面的式子进行计算。<br />$OH=\frac{H+2P-FH}{S}+1 \\
-\ \\
-OW=\frac{W+2P-FW}{S}+1$<br />使用此算式做几个计算。
+将这样的关系写成算式。假设输入大小为(H, W)，滤波器大小为(FH, FW)，输出大小为(OH, OW)，填充为P，步幅为S。此时，输出大小可通过下面的式子进行计算。<br />![](https://cdn.nlark.com/yuque/__latex/1bbab030427e686025027005b59113cd.svg#card=math&code=OH%3D%5Cfrac%7BH%2B2P-FH%7D%7BS%7D%2B1%20%5C%5C%0A%5C%20%5C%5C%0AOW%3D%5Cfrac%7BW%2B2P-FW%7D%7BS%7D%2B1&id=scNRy)<br />使用此算式做几个计算。
 
 1. 输入大小(H, W)：(4,4)；填充P：1；步幅S：1；滤波器大小(FH, FW)：(3,3)
 
-$OH=\frac{4+2·1-3}{1}+1=4 \\
-\ \\
-OW=\frac{4+2·1-3}{1}+1=4$
+![](https://cdn.nlark.com/yuque/__latex/17cc473a17c08b1bc9be940e9328155d.svg#card=math&code=OH%3D%5Cfrac%7B4%2B2%C2%B71-3%7D%7B1%7D%2B1%3D4%20%5C%5C%0A%5C%20%5C%5C%0AOW%3D%5Cfrac%7B4%2B2%C2%B71-3%7D%7B1%7D%2B1%3D4&id=ExYnS)
 
 2. 输入大小(H, W)：(7, 7)；填充P：0；步幅S：2；滤波器大小(FH, FW)：(3, 3)
 
-$OH=\frac{7+2·0-3}{2}+1=3 \\
-\ \\
-OW=\frac{7+2·0-3}{2}+1=3$
+![](https://cdn.nlark.com/yuque/__latex/fbfe22a8c46aab816511ac6c1db3ce70.svg#card=math&code=OH%3D%5Cfrac%7B7%2B2%C2%B70-3%7D%7B2%7D%2B1%3D3%20%5C%5C%0A%5C%20%5C%5C%0AOW%3D%5Cfrac%7B7%2B2%C2%B70-3%7D%7B2%7D%2B1%3D3&id=fYC0n)
 
 3. 输入大小(H, W)：(28, 31)；填充P：2；步幅S：3；滤波器大小(FH, FW)：(5, 5)
 
-$OH=\frac{28+2·2-5}{3}+1=10 \\
-\ \\
-OW=\frac{31+2·2-5}{3}+1=11$
+![](https://cdn.nlark.com/yuque/__latex/300aa959e752d8e02e9526fffba68016.svg#card=math&code=OH%3D%5Cfrac%7B28%2B2%C2%B72-5%7D%7B3%7D%2B1%3D10%20%5C%5C%0A%5C%20%5C%5C%0AOW%3D%5Cfrac%7B31%2B2%C2%B72-5%7D%7B3%7D%2B1%3D11&id=b8l7S)
 
-如这些例子所示，通过在计算式中代入值，就可以计算输出大小。这里需要注意的是，虽然只要代入值就可以计算输出大小，但是所设定的值必须使式 $\frac{H+2P-FH}{S}$和$\frac{W+2P-FW}{S}$分别可以除尽。当输出大小无法除尽时（结果是小数时），需要采取报错等对策。
+如这些例子所示，通过在计算式中代入值，就可以计算输出大小。这里需要注意的是，虽然只要代入值就可以计算输出大小，但是所设定的值必须使式 ![](https://cdn.nlark.com/yuque/__latex/d8a947a8423980f6d0dfc4103451aee7.svg#card=math&code=%5Cfrac%7BH%2B2P-FH%7D%7BS%7D&id=Ozopp)和![](https://cdn.nlark.com/yuque/__latex/22b641e6606759b9d2ef4d8cf2758d0c.svg#card=math&code=%5Cfrac%7BW%2B2P-FW%7D%7BS%7D&id=QeiIY)分别可以除尽。当输出大小无法除尽时（结果是小数时），需要采取报错等对策。
 
 ### 7.2.5 3维数据的卷积运算
 下图是卷积运算的例子与计算顺序。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1683424319622-15fac21d-59d6-4c1b-ac4e-ec031756150b.png#averageHue=%23424242&clientId=u80612cfc-fbd1-4&from=paste&height=273&id=ua609052e&originHeight=341&originWidth=862&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=42002&status=done&style=none&taskId=u3efb41a0-e17d-43a7-8c2f-225b54c92a9&title=&width=689.6)<br />通道方向上有多个特征图时，会按通道进行输入数据和滤波器的卷积运算，并将结果相加，从而得到输出。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1683424417755-b81a5f83-4162-447e-8d4d-2958f42e3bb0.png#averageHue=%23434343&clientId=u80612cfc-fbd1-4&from=paste&height=995&id=u7570ffbd&originHeight=1244&originWidth=863&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=137046&status=done&style=none&taskId=u7820db03-5dc3-4efc-ba80-5bfcdabbd60&title=&width=690.4)
@@ -2480,9 +2459,75 @@ OW=\frac{31+2·2-5}{3}+1=11$
 ![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1683427746798-3d3c3bf2-f339-4089-a504-f0ade22fe61a.png#averageHue=%23444444&clientId=u80612cfc-fbd1-4&from=paste&height=197&id=u48356d44&originHeight=246&originWidth=866&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=31406&status=done&style=none&taskId=ua03e216e-e9e3-4db3-a137-c8952d0e8b7&title=&width=692.8)
 
 ## 7.4 卷积层和池化层的实现
+### 7.4.1 4维数组
+> 所谓4维数据，比如数据的形状是(10, 1, 28, 28)，则它对应10个高为28、长为28、通道为1的数据。
 
+访问第1个和第2个数据：![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1683428888630-375f0ccd-eda3-447f-a9c6-8ecf69b719e0.png#averageHue=%23414141&clientId=u80612cfc-fbd1-4&from=paste&height=56&id=u6c828c07&originHeight=70&originWidth=327&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=11215&status=done&style=none&taskId=u88e4550c-1a47-43b6-9267-47066ea758a&title=&width=261.6)<br />访问第1个数据的第1个通道的空间数据：![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1683428911281-02b031bf-286d-4ed5-af9e-10f690aebc70.png#averageHue=%23414141&clientId=u80612cfc-fbd1-4&from=paste&height=32&id=u9e265461&originHeight=40&originWidth=291&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=5083&status=done&style=none&taskId=uc3599567-402c-4f27-8109-2eb75e89042&title=&width=232.8)
 
+### 7.4.2 基于im2col的展开
+im2col是一个函数，将输入数据展开以适合滤波器（权重）。如下图所示，对3维的输入数据应用im2col后，数据转换为2维矩阵（正确地讲，是把包含批数量的4维数据转换成了2维数据）。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1683429037171-c6016ce5-1d31-40b8-8ee0-5b4816f84412.png#averageHue=%23494949&clientId=u80612cfc-fbd1-4&from=paste&height=254&id=u36323be1&originHeight=318&originWidth=861&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=11584&status=done&style=none&taskId=u3409c8fe-c0c8-47a8-8154-1755ff926f9&title=&width=688.8)
 
+im2col会把输入数据展开以适合滤波器（权重）。具体地说，如下图所示，对于输入数据，将应用滤波器的区域（3维方块）横向展开为1列。im2col会在所有应用滤波器的地方进行这个展开处理。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1683429124083-8d0f331d-c5dd-4e0d-aa37-0c1c276b50cd.png#averageHue=%234a4a4a&clientId=u80612cfc-fbd1-4&from=paste&height=276&id=uf180f385&originHeight=345&originWidth=861&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=19335&status=done&style=none&taskId=u83e52a2c-2af1-419a-af3a-634a6a22fa3&title=&width=688.8)
+
+使用im2col展开输入数据后，之后就只需将卷积层的滤波器（权重）纵向展开为1列，并计算2个矩阵的乘积即可。这和全连接层的Affine层进行的处理基本相同。如下图所示，基于im2col方式的输出结果是2维矩阵。因为CNN中数据会保存为4维数组，所以要将2维输出数据转换为合适的形状。以上就是卷积层的实现流程。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1683429276884-1aed5249-380c-4676-a278-915c001f61bd.png#averageHue=%23434343&clientId=u80612cfc-fbd1-4&from=paste&height=412&id=u037e8b20&originHeight=515&originWidth=861&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=39876&status=done&style=none&taskId=u653f5f8d-80cb-4ded-97b0-9a5b67f3d93&title=&width=688.8)
+
+### 7.4.3 卷积层的实现
+im2col这一便捷函数具有以下接口。<br />`im2col (input_data, filter_h, filter_w, stride=1, pad=0)`
+
+- input_data：由（数据量，通道，高，长）的4维数组构成的输入数据
+- filter_h：滤波器的高
+- filter_w：滤波器的长
+- stride：步幅
+- pad：填充
+
+im2col会考虑滤波器大小、步幅、填充，将输入数据展开为2维数组。现在，我们来实际使用一下这个im2col。
+```python
+import sys
+sys.path.append("D:\Download\ProgrammingTools\VSCode\CodeWorkSpace\deep-learning-introduction") # 为了导入父目录的文件而进行的设定
+from common.util import im2col
+import numpy as np
+
+x1 = np.random.rand(1,3,7,7)
+col1 = im2col(x1,5,5,stride=1,pad=0)
+print(col1.shape) # (9,75)
+
+x2 = np.random.rand(10,3,7,7)
+col1 = im2col(x2,5,5,stride=1,pad=0)
+print(col1.shape) # (90,75)
+```
+上面的两个例子，第一个的批大小为1，通道为3的 7 × 7 的数据， 第二个的批大小为10，数据形状和第一个相同。分别对其应用im2col函数，在这两种情形下，第2维的元素个数均为75。这是滤波器（通道为3、大小为5 × 5）的元素个数的总和。批大小为1时，im2col的结果是(9, 75)。而第2个例子中批大小为10，所以保存了10倍的数据，即(90, 75)。
+
+现在使用im2col来实现卷积层。这里我们将卷积层实现为名为Convolution的类。
+```python
+import sys
+sys.path.append("D:\Download\ProgrammingTools\VSCode\CodeWorkSpace\deep-learning-introduction") # 为了导入父目录的文件而进行的设定
+from common.util import im2col
+import numpy as np
+
+class Convolution:
+    def __init__(self, W, b, stride=1, pad=0):
+        self.W = W
+        self.b = b
+        self.stride = stride
+        self.pad = pad
+
+    def forward(self, x):
+        FN, C, FH, FW = self.W.shape
+        N, C, H, W = x.shape
+        out_h = int(1 + (H + 2*self.pad - FH) / self.stride)
+        out_w = int(1 + (W + 2*self.pad - FW) / self.stride)
+
+        col = im2col(x, FH, FW, self.stride, self.pad)
+        col_W = self.W.reshape(FN, -1).T # 滤波器的展开
+        out = np.dot(col, col_W) + self.b
+
+        out = out.reshape(N, out_h, out_w, -1).transpose(0, 3, 1, 2)
+
+        return out
+```
+卷积层的初始化方法将滤波器（权重）、偏置、步幅、填充作为参数接收。滤波器是(FN, C, FH, FW)的 4 维形状。另外，FN、C、FH、FW分别是 Filter Number（滤波器数量）、Channel、Filter Height、Filter Width的缩写。<br />展开滤波器的部分将各个滤波器的方块纵向展开为 1 列。这里通过`reshape(FN,-1)`将参数指定为-1，这是reshape的一个便利的功能。通过在reshape时指定为-1，reshape函数会自动计算-1维度上的元素个数，以使多维数组的元素个数前后一致。比如，(10, 3, 5, 5)形状的数组的元素个数共有 750个，指定reshape(10,-1)后，就会转换成(10, 75)形状的数组。
+
+forward的实现中，最后会将输出大小转换为合适的形状。转换时使用了NumPy的transpose函数。transpose会更改多维数组的轴的顺序。如下图所示，通过指定从0开始的索引（编号）序列，就可以更改轴的顺序。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1683447270181-9a013492-e5b7-4100-bef8-6e745a43789f.png#averageHue=%23414141&clientId=u80612cfc-fbd1-4&from=paste&height=203&id=ud6548757&originHeight=254&originWidth=865&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=24133&status=done&style=none&taskId=udadcdde7-bcdc-4343-a62c-90e187f4135&title=&width=692)
 
 
 
