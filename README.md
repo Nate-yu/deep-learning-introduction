@@ -1,6 +1,5 @@
 <!-- TOC -->
 
-- [1 Python知识预备](#1-python知识预备)
     - [1.1 Python的安装](#11-python的安装)
     - [1.2 Python解释器](#12-python解释器)
     - [1.3 Python脚本文件](#13-python脚本文件)
@@ -130,9 +129,9 @@
         - [7.4.1 4维数组](#741-4维数组)
         - [7.4.2 基于im2col的展开](#742-基于im2col的展开)
         - [7.4.3 卷积层的实现](#743-卷积层的实现)
+        - [7.4.4 池化层的实现](#744-池化层的实现)
 
 <!-- /TOC -->
-# 1 Python知识预备
 ## 1.1 Python的安装
 将使用的编程语言与库。
 
@@ -2529,7 +2528,49 @@ class Convolution:
 
 forward的实现中，最后会将输出大小转换为合适的形状。转换时使用了NumPy的transpose函数。transpose会更改多维数组的轴的顺序。如下图所示，通过指定从0开始的索引（编号）序列，就可以更改轴的顺序。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1683447270181-9a013492-e5b7-4100-bef8-6e745a43789f.png#averageHue=%23414141&clientId=u80612cfc-fbd1-4&from=paste&height=203&id=ud6548757&originHeight=254&originWidth=865&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=24133&status=done&style=none&taskId=udadcdde7-bcdc-4343-a62c-90e187f4135&title=&width=692)
 
+### 7.4.4 池化层的实现
+池化层的实现和卷积层相同，都使用im2col展开输入数据。不过，池化的情况下，在通道方向上是独立的，这一点和卷积层不同。具体地讲，如下图所示，池化的应用区域按通道单独展开。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1683531887254-164cd502-f2cf-4f30-a587-fbbd533a29fd.png#averageHue=%23434242&clientId=u3b1ff29d-14ec-4&from=paste&height=510&id=ue69c9337&originHeight=638&originWidth=866&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=59490&status=done&style=none&taskId=u33ae99c7-2bd8-4f77-b9f2-47c44870ffa&title=&width=692.8)<br />像这样展开之后，只需对展开的矩阵求各行的最大值，并转换为合适的形状即可<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1683531981252-3a9b85b0-4158-4ee4-8618-4e72a9783c74.png#averageHue=%23434343&clientId=u3b1ff29d-14ec-4&from=paste&height=343&id=u82e5062c&originHeight=429&originWidth=864&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=55210&status=done&style=none&taskId=ubfac7361-6ab1-43a2-aa68-95c756c9ae7&title=&width=691.2)
 
+池化层的实现按下面3个阶段进行。
+
+1. 展开输入数据
+2. 求各行的最大值
+3. 转换为合适的输出大小
+
+下面用Python来实现一下。
+```python
+import sys
+sys.path.append("D:\Download\ProgrammingTools\VSCode\CodeWorkSpace\deep-learning-introduction") # 为了导入父目录的文件而进行的设定
+from common.util import im2col
+import numpy as np
+
+
+class Pooling:
+    def __init__(self, pool_h, pool_w, stride=1, pad=0):
+        self.pool_h = pool_h
+        self.pool_w = pool_w
+        self.stride = stride
+        self.pad = pad
+
+
+    def forward(self, x):
+        N, C, H, W = x.shape
+        out_h = int(1 + (H - self.pool_h) / self.stride)
+        out_w = int(1 + (W - self.pool_w) / self.stride)
+
+        # 展开
+        col = im2col(x, self.pool_h, self.pool_w, self.stride, self.pad)
+        col = col.reshape(-1, self.pool_h * self.pool_w)
+
+        # 最大值
+        out = np.max(col, axis=1)
+
+        # 转换
+        out = out.reshape(N, out_h, out_w, C).transpose(0, 3, 1, 2)
+
+
+        return out
+```
 
 
 
