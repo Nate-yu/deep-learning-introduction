@@ -1,5 +1,6 @@
 <!-- TOC -->
 
+- [1 Python知识预备](#1-python知识预备)
     - [1.1 Python的安装](#11-python的安装)
     - [1.2 Python解释器](#12-python解释器)
     - [1.3 Python脚本文件](#13-python脚本文件)
@@ -130,8 +131,10 @@
         - [7.4.2 基于im2col的展开](#742-基于im2col的展开)
         - [7.4.3 卷积层的实现](#743-卷积层的实现)
         - [7.4.4 池化层的实现](#744-池化层的实现)
+    - [7.5 CNN的实现](#75-cnn的实现)
 
 <!-- /TOC -->
+# 1 Python知识预备
 ## 1.1 Python的安装
 将使用的编程语言与库。
 
@@ -2572,15 +2575,119 @@ class Pooling:
         return out
 ```
 
+## 7.5 CNN的实现
+将要实现的CNN如下图所示。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1683534474402-d2df9af8-4906-499c-b387-ba691d96aeeb.png#averageHue=%23424242&clientId=u3b1ff29d-14ec-4&from=paste&height=225&id=u412826a4&originHeight=281&originWidth=863&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=12810&status=done&style=none&taskId=ue1a69b57-eca0-45de-bc13-fa8dbd02990&title=&width=690.4)<br />如上所示，网络的构成是“Convolution - ReLU - Pooling -Affine - ReLU - Affine - Softmax”，我们将它实现为名为SimpleConvNet的类。首先来看一下SimpleConvNet的初始化（__init__），取下面这些参数。
 
+- input_dim: 输入数据的的维度（通道、高、长）
+- conv_param: 卷积层的超参数（字典）。字典关键字如下：
+   - filter_num: 滤波器数量
+   - filter_size: 滤波器大小
+   - stride: 步幅
+   - pad: 填充
+- hidden_size: 隐藏层（全连接）的神经元数量
+- output_size: 输出层（全连接）的神经元数量
+- weightt_int_std: 初始化时权重的标准差
 
+SimpleConvNet初始化的实现分为下面三部分说明。
 
+1. 初始化的最开始部分
+```python
+class SimpleConvNet:
+    def __init__(self,input_dim=(1,28,28),
+                 conv_param={'filter_num':30, 'filter_size': 5,
+                             'pad': 0, 'stride': 1},
+                hidden_size=100,output_size=10,weight_init_std=0.01):
+        filter_num = conv_param['filter_num']
+        filter_size = conv_param['filter_size']
+        filter_pad = conv_param['pad']
+        filter_stride = conv_param['stride']
+        input_size = input_dim[1]
+        conv_output_size = (input_size - filter_size + 2*filter_pad) / filter_stride + 1
+        pool_output_size = int(filter_num * (conv_output_size/2) * (conv_output_size/2))
+```
+这里将由初始化参数传入的卷积层的超参数从字典中取了出来（以方便后面使用），然后，计算卷积层的输出大小。
 
+2. 权重参数的初始化部分
+```python
+self.params = {}
+        self.params['W1'] = weight_init_std * np.random.randn(filter_num, input_dim[0],filter_size, filter_size)
+        self.params['b1'] = np.zeros(filter_num)
+        self.params['W2'] = weight_init_std * np.random.randn(pool_output_size, hidden_size)
+        self.params['b2'] = np.zeros(hidden_size)
+        self.params['W3'] = weight_init_std * np.random.randn(hidden_size, output_size)
+        self.params['b3'] = np.zeros(output_size)
+```
+学习所需的参数是第1层的卷积层和剩余两个全连接层的权重和偏置。将这些参数保存在实例变量的params字典中。将第1层的卷积层的权重设为关键字W1，偏置设为关键字b1。同样，分别用关键字W2、b2和关键字W3、b3来保存第2个和第3个全连接层的权重和偏置。
 
+3. 生成必要的层
+```python
+self.layers = OrderedDict()
+self.layers['Conv1'] = Convolution(self.params['W1'],
+                           self.params['b1'],
+                           conv_param['stride'],
+                           conv_param['pad'])
+self.layers['Relu1'] = Relu()
+self.layers['Pool1'] = Pooling(pool_h=2, pool_w=2, stride=2)
+self.layers['Affine1'] = Affine(self.params['W2'],
+                            self.params['b2'])
+self.layers['Relu2'] = Relu()
+self.layers['Affine2'] = Affine(self.params['W3'],
+                            self.params['b3'])
+self.last_layer = SoftmaxWithLoss()
+```
+从最前面开始按顺序向有序字典（OrderedDict）的layers中添加层。只有最后的SoftmaxWithLoss层被添加到别的变量lastLayer中。
 
+以上就是SimpleConvNet的初始化中进行的处理。像这样初始化后，进行推理的predict方法和求损失函数值的loss方法就可以像下面这样实现。
+```python
+def predict(self, x):
+        for layer in self.layers.values():
+            x = layer.forward(x)
 
+        return x
 
+    def loss(self, x, t):
+        """求损失函数
+        参数x是输入数据、t是教师标签
+        """
+        y = self.predict(x)
+        return self.last_layer.forward(y, t)
+```
+	这里，参数x是输入数据，t是教师标签。用于推理的predict方法从头开始依次调用已添加的层，并将结果传递给下一层。在求损失函数的loss方法中，除了使用predict方法进行的forward处理之外，还会继续进行forward处理，直到到达最后的SoftmaxWithLoss层。
 
+接下来是基于误差反向传播法求梯度的代码实现。
+```python
+def gradient(self, x, t):
+        """求梯度（误差反向传播法）
 
+        Parameters
+        ----------
+        x : 输入数据
+        t : 教师标签
 
+        Returns
+        -------
+        具有各层的梯度的字典变量
+            grads['W1']、grads['W2']、...是各层的权重
+            grads['b1']、grads['b2']、...是各层的偏置
+        """
+        # forward
+        self.loss(x, t)
 
+        # backward
+        dout = 1
+        dout = self.last_layer.backward(dout)
+
+        layers = list(self.layers.values())
+        layers.reverse()
+        for layer in layers:
+            dout = layer.backward(dout)
+
+        # 设定
+        grads = {}
+        grads['W1'], grads['b1'] = self.layers['Conv1'].dW, self.layers['Conv1'].db
+        grads['W2'], grads['b2'] = self.layers['Affine1'].dW, self.layers['Affine1'].db
+        grads['W3'], grads['b3'] = self.layers['Affine2'].dW, self.layers['Affine2'].db
+
+        return grads
+```
+	参数的梯度通过误差反向传播法（反向传播）求出，通过把正向传播和反向传播组装在一起来完成。
