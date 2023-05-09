@@ -132,6 +132,12 @@
         - [7.4.3 卷积层的实现](#743-卷积层的实现)
         - [7.4.4 池化层的实现](#744-池化层的实现)
     - [7.5 CNN的实现](#75-cnn的实现)
+    - [7.6 CNN的可视化](#76-cnn的可视化)
+        - [7.6.1 第1层权重的可视化](#761-第1层权重的可视化)
+        - [7.6.2 基于分层结构的信息提取](#762-基于分层结构的信息提取)
+    - [7.7 具有代表性的CNN](#77-具有代表性的cnn)
+        - [7.7.1 LeNet](#771-lenet)
+        - [7.7.2 AlexNet](#772-alexnet)
 
 <!-- /TOC -->
 # 1 Python知识预备
@@ -2691,3 +2697,33 @@ def gradient(self, x, t):
         return grads
 ```
 	参数的梯度通过误差反向传播法（反向传播）求出，通过把正向传播和反向传播组装在一起来完成。
+
+## 7.6 CNN的可视化
+### 7.6.1 第1层权重的可视化
+现在，我们将卷积层（第 1层）的滤波器显示为图像。这里，我们来比较一下学习前和学习后的权重，结果如下图所示。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1683600612630-9f6fc965-550e-474d-96dd-012d840230fa.png#averageHue=%23aeaeae&clientId=u08175942-5bc2-4&from=paste&height=300&id=u10179241&originHeight=600&originWidth=800&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=12380&status=done&style=none&taskId=u8333e9b8-c48a-4a66-b0e6-c91eaba1086&title=&width=400)![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1683600620071-65a0ceac-6f5d-4709-8028-fcd7d8077fef.png#averageHue=%23a0a0a0&clientId=u08175942-5bc2-4&from=paste&height=300&id=u7c263bfb&originHeight=600&originWidth=800&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=11888&status=done&style=none&taskId=u89c6e4d5-972d-4d93-975a-cb6d1928116&title=&width=400)
+
+上图中，学习前的滤波器是随机进行初始化的，所以在黑白的浓淡上没有规律可循，但学习后的滤波器变成了有规律的图像。我们发现，通过学习，滤波器被更新成了有规律的滤波器，比如从白到黑渐变的滤波器、含有块状区域（称为blob）的滤波器等。<br />右边有规律的滤波器在观察边缘（颜色变化的分界线）和斑块（局部的块状区域）等。由此可知，卷积层的滤波器会提取边缘或斑块等原始信息。
+
+### 7.6.2 基于分层结构的信息提取
+下图展示了进行一般物体识别（车或狗等）的8层CNN。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1683600837729-31d4addd-91d3-4d24-9c9f-6d0ed9ee2063.png#averageHue=%23515151&clientId=u08175942-5bc2-4&from=paste&height=323&id=u0ab33f7a&originHeight=404&originWidth=861&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=218783&status=done&style=none&taskId=u38e3bfd7-0305-4202-9f8c-fe87cc50fc0&title=&width=688.8)<br />AlexNet网络结构堆叠了多层卷积层和池化层，最后经过全连接层输出结果。上图的方块表示的是中间数据，对于这些中间数据，会连续应用卷积运算。<br />上图是CNN的卷积层中提取的信息。第1层的神经元对边缘或斑块有响应，第3层对纹理有响应，第5层对物体部件有响应，最后的全连接层对物体的类别（狗或车）有响应
+
+如果堆叠了多层卷积层，则随着层次加深，提取的信息也愈加复杂、抽象。最开始的层对简单的边缘有响应，接下来的层对纹理有响应，再后面的层对更加复杂的物体部件有响应。也就是说，随着层次加深，神经元从简单的形状向“高级”信息变化。换句话说，就像我们理解东西的“含义”一样，响应的对象在逐渐变化。
+
+## 7.7 具有代表性的CNN
+### 7.7.1 LeNet
+> LeNet进行手写数字识别的网络。它有连续的卷积层和池化层（正确地讲，是只“抽选元素”的子采样层），最后经全连接层输出结果。
+
+与现在的CNN的不同之处
+
+1. LeNet 中使用sigmoid 函数，而现在的 CNN中主要使用 ReLU 函数。
+2. 原始的LeNet中使用子采样（subsampling）缩小中间数据的大小，而现在的CNN中Max池化是主流。
+
+### 7.7.2 AlexNet
+AlexNet网络结构如下。<br />![image.png](https://cdn.nlark.com/yuque/0/2023/png/25941432/1683601154839-1f9f440a-4d0e-4ec6-87da-bf1aa1f89022.png#averageHue=%23424242&clientId=u08175942-5bc2-4&from=paste&height=266&id=u6dd08628&originHeight=332&originWidth=864&originalType=binary&ratio=1.25&rotation=0&showTitle=false&size=53337&status=done&style=none&taskId=u970594c9-d574-4267-96ce-f6dc1a2e152&title=&width=691.2)<br />AlexNet叠有多个卷积层和池化层，最后经由全连接层输出结果。
+
+AlexNet与LeNet的差异如下。
+
+1. 激活函数使用ReLU。
+2. 使用进行局部正规化的LRN（Local Response Normalization）层。
+3. 使用Dropout。
+
